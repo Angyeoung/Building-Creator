@@ -117,6 +117,7 @@ public class BuildingCreatorEditor : Editor {
                 CreateNewBuilding();
                 CreateNewPoint();
             } else {
+                SelectBuildingUnderMouse();
                 CreateNewPoint();
             }
         }
@@ -172,7 +173,6 @@ public class BuildingCreatorEditor : Editor {
                 }
             }
 
-
             if (mouseOverPointIndex != SelectionInfo.mouseOverPointIndex || mouseOverBuildingIndex != SelectionInfo.mouseOverBuildingIndex) {
                 SelectionInfo.mouseOverBuildingIndex = mouseOverBuildingIndex;
                 SelectionInfo.mouseOverPointIndex = mouseOverPointIndex;
@@ -183,8 +183,7 @@ public class BuildingCreatorEditor : Editor {
             if (SelectionInfo.mouseIsOverPoint) {
                 SelectionInfo.mouseIsOverLine = false;
                 SelectionInfo.mouseOverLineIndex = -1;
-            }
-            else {
+            } else {
                 float closestLineDistance = BC.handleRadius;
                 for (int buildingIndex = 0; buildingIndex < BC.buildings.Count; buildingIndex++) {
                     Building currentBuilding = BC.buildings[buildingIndex];
@@ -267,39 +266,47 @@ public class BuildingCreatorEditor : Editor {
     void Draw() {
         for (int buildingIndex = 0; buildingIndex < BC.buildings.Count; buildingIndex++) {    
             Building currentBuilding = BC.buildings[buildingIndex];
-            Color deselectedColor = Color.gray;
-            bool buildingIsSelected = (buildingIndex == SelectionInfo.buildingIndex);
-            bool mouseIsOverBuilding = (buildingIndex == SelectionInfo.mouseOverBuildingIndex);
+            bool currentBuildingIsSelected = (buildingIndex == SelectionInfo.buildingIndex);
+            bool mouseIsOverCurrentBuilding = (buildingIndex == SelectionInfo.mouseOverBuildingIndex);
 
             // For each point in this building
             for (int i = 0; i < currentBuilding.points.Count; i++) {
-
+                Color deselected = Color.gray, activeLine = Color.red, 
+                    hover = Color.blue, dragged = Color.black, idle = Color.white;
+                Vector3 thisPoint = currentBuilding.points[i];
                 Vector3 nextPoint = currentBuilding.points[(i+1) % currentBuilding.points.Count];
+                Vector3 aboveThisPoint = thisPoint + Vector3.up * currentBuilding.height;
+                Vector3 aboveNextPoint = nextPoint + Vector3.up * currentBuilding.height;
+                bool mouseIsOverThisPoint = (i == SelectionInfo.mouseOverPointIndex);
+                bool mouseIsOverThisLine = (i == SelectionInfo.mouseOverLineIndex);
+                bool thisPointIsBeingDragged = (mouseIsOverThisPoint && SelectionInfo.pointIsBeingDragged);
                 
-                if (i == SelectionInfo.mouseOverLineIndex && mouseIsOverBuilding) {
-                    Handles.color = Color.blue;
-                    Handles.DrawLine(currentBuilding.points[i], nextPoint, 5);
+                // Lines
+                if (mouseIsOverThisLine && mouseIsOverCurrentBuilding) {
+                    Handles.color = hover;
+                    Handles.DrawLine(thisPoint, nextPoint, 4);
+                    Handles.DrawLine(aboveThisPoint, aboveNextPoint, 4);
                 } else {
-                    Handles.color = (buildingIsSelected) ? Color.red : deselectedColor;
-                    Handles.DrawDottedLine(currentBuilding.points[i], nextPoint, 4);
+                    Handles.color = (currentBuildingIsSelected) ? activeLine : deselected;
+                    Handles.DrawDottedLine(thisPoint, nextPoint, 4);
+                    Handles.DrawDottedLine(aboveThisPoint, aboveNextPoint, 4);
                 }
 
                 // Discs
-                if (i == SelectionInfo.mouseOverPointIndex && mouseIsOverBuilding) {
-                    Handles.color = (SelectionInfo.pointIsBeingDragged) ? Color.black : Color.red;
+                if (i == SelectionInfo.mouseOverPointIndex && mouseIsOverCurrentBuilding) {
+                    Handles.color = (SelectionInfo.pointIsBeingDragged) ? dragged : hover;
+                } else {
+                    Handles.color = (currentBuildingIsSelected) ? idle : deselected;
                 }
-                else {
-                    Handles.color = (buildingIsSelected) ? Color.white : deselectedColor;
-                }
-                Handles.DrawSolidDisc(currentBuilding.points[i], Vector3.up, BC.handleRadius);
+                Handles.DrawSolidDisc(thisPoint, Vector3.up, BC.handleRadius);
                 
                 // Draw Vertical Lines
-                if (BC.showVerticalLines){
-                    Handles.color = Color.red;
-                    Handles.DrawDottedLine(currentBuilding.points[i], currentBuilding.points[i] + Vector3.up * currentBuilding.height, 4f);
+                if (BC.showOutlines){
+                    if (currentBuildingIsSelected) {
+                        Handles.color = (thisPointIsBeingDragged) ? dragged : activeLine;
+                    }
+                    Handles.DrawDottedLine(thisPoint, aboveThisPoint, 4f);
                 }
-
-                
             }
         }
         buildingHasChanged = false;
