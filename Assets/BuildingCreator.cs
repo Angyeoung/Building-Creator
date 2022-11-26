@@ -18,18 +18,14 @@ public class BuildingCreator : MonoBehaviour {
     }
 
     // List of buildings
-    [HideInInspector]
     public List<Building> buildings = new List<Building>();
 
     // Settings
-    [Range(0.5f, 3f)]
     public float handleRadius = 0.5f;
-    [HideInInspector]
-    public bool showBuildingsList = false;
-    [HideInInspector]
     public bool showOutlines = true;
-    [HideInInspector]
     public bool showSelectionInfo = false; 
+    public bool showBuildingsList = false;
+    public bool showSelectedBuildingInfo = false;
 
 }
 

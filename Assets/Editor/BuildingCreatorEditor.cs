@@ -14,7 +14,15 @@ public class BuildingCreatorEditor : Editor {
 
     // Custom inspector
     public override void OnInspectorGUI() {
-        base.OnInspectorGUI();
+        // base.OnInspectorGUI();
+
+        // Header
+        Rect rect = GUILayoutUtility.GetRect(18, 18, 30f, 30f);
+        EditorGUI.ProgressBar(rect, 1, "Building Creator");
+
+        // Settings
+        BC.handleRadius = EditorGUILayout.Slider("Handle Size", BC.handleRadius, 0f, 5f);
+        BC.showOutlines = EditorGUILayout.Toggle("Show Outlines", BC.showOutlines);
 
         // Selection info foldout
         EditorGUILayout.Space(15f);
@@ -39,7 +47,7 @@ public class BuildingCreatorEditor : Editor {
             for (int i = 0; i < BC.buildings.Count; i++)
             {
                 GUILayout.BeginHorizontal();
-                GUILayout.Label("  Building " + (i + 1));
+                GUILayout.Label("Building " + (i + 1));
                 GUI.enabled = (i != SelectionInfo.buildingIndex);
                 if (GUILayout.Button("Select")) {
                     Undo.RecordObject(BC, "Select Building");
@@ -51,6 +59,34 @@ public class BuildingCreatorEditor : Editor {
                 }
                 GUILayout.EndHorizontal();
             }
+            GUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(" ");
+            if (GUILayout.Button("Deselect")) {
+                SelectionInfo.buildingIndex = -1;
+            }
+            GUILayout.EndHorizontal();
+        }
+
+        // Selected building info foldout
+        EditorGUILayout.Space(15f);
+        BC.showSelectedBuildingInfo = EditorGUILayout.Foldout(BC.showSelectedBuildingInfo, "Selected Building Info");
+        if(BC.showSelectedBuildingInfo && SelectionInfo.buildingIndex != -1) {
+            // Material
+            EditorGUILayout.Space();
+            SelectedBuilding.buildingMaterial = (Material)EditorGUILayout.ObjectField("Material", SelectedBuilding.buildingMaterial, typeof(Material), true);
+
+            // Assets
+            EditorGUILayout.Space();
+            SelectedBuilding.door = (GameObject)EditorGUILayout.ObjectField("Door", SelectedBuilding.door, typeof(GameObject), true);
+            SelectedBuilding.window = (GameObject)EditorGUILayout.ObjectField("Window", SelectedBuilding.window, typeof(GameObject), true);
+
+            EditorGUILayout.Space();
+            SelectedBuilding.inverted = EditorGUILayout.Toggle("Inverted", SelectedBuilding.inverted);
+
+            EditorGUILayout.Space();
+            SelectedBuilding.edgeOffset = EditorGUILayout.FloatField("Edge Offset", SelectedBuilding.edgeOffset);
+            SelectedBuilding.gap = EditorGUILayout.FloatField("Gap", SelectedBuilding.gap);
+            SelectedBuilding.height = EditorGUILayout.FloatField("Height", SelectedBuilding.height);
         }
 
         // Delete buildings if needed (While maintaining proper selection)
@@ -110,10 +146,13 @@ public class BuildingCreatorEditor : Editor {
             // if (SelectionInfo.mouseIsOverPoint) SelectPointUnderMouse();
             // else CreateNewPoint();
 
-            if (SelectionInfo.mouseIsOverPoint) {
+            if (BC.buildings.Count == 0) {
+                CreateNewBuilding();
+                CreateNewPoint();
+            } else if (SelectionInfo.mouseIsOverPoint) {
                 SelectBuildingUnderMouse();
                 SelectPointUnderMouse();
-            } else if (BC.buildings.Count == 0 || SelectionInfo.buildingIndex == -1) {
+            } else if (SelectionInfo.buildingIndex == -1 && !SelectionInfo.mouseIsOverLine) {
                 CreateNewBuilding();
                 CreateNewPoint();
             } else {
@@ -277,26 +316,28 @@ public class BuildingCreatorEditor : Editor {
                 Vector3 nextPoint = currentBuilding.points[(i+1) % currentBuilding.points.Count];
                 Vector3 aboveThisPoint = thisPoint + Vector3.up * currentBuilding.height;
                 Vector3 aboveNextPoint = nextPoint + Vector3.up * currentBuilding.height;
-                bool mouseIsOverThisPoint = (i == SelectionInfo.mouseOverPointIndex);
-                bool mouseIsOverThisLine = (i == SelectionInfo.mouseOverLineIndex);
+                bool mouseIsOverThisPoint = (i == SelectionInfo.mouseOverPointIndex && mouseIsOverCurrentBuilding);
+                bool mouseIsOverThisLine = (i == SelectionInfo.mouseOverLineIndex && mouseIsOverCurrentBuilding);
                 bool thisPointIsBeingDragged = (mouseIsOverThisPoint && SelectionInfo.pointIsBeingDragged);
                 
                 // Lines
-                if (mouseIsOverThisLine && mouseIsOverCurrentBuilding) {
+                if (mouseIsOverThisLine) {
                     Handles.color = hover;
                     Handles.DrawLine(thisPoint, nextPoint, 4);
-                    Handles.DrawLine(aboveThisPoint, aboveNextPoint, 4);
+                    if (BC.showOutlines) Handles.DrawLine(aboveThisPoint, aboveNextPoint, 4);
                 } else {
                     Handles.color = (currentBuildingIsSelected) ? activeLine : deselected;
                     Handles.DrawDottedLine(thisPoint, nextPoint, 4);
-                    Handles.DrawDottedLine(aboveThisPoint, aboveNextPoint, 4);
+                    if (BC.showOutlines) Handles.DrawDottedLine(aboveThisPoint, aboveNextPoint, 4);
                 }
 
                 // Discs
-                if (i == SelectionInfo.mouseOverPointIndex && mouseIsOverCurrentBuilding) {
+                if (mouseIsOverThisPoint && Event.current.shift) {
+                    Handles.color = (SelectionInfo.pointIsBeingDragged) ? dragged : activeLine;
+                } else if (mouseIsOverThisPoint) {
                     Handles.color = (SelectionInfo.pointIsBeingDragged) ? dragged : hover;
                 } else {
-                    Handles.color = (currentBuildingIsSelected) ? idle : deselected;
+                    Handles.color = (currentBuildingIsSelected) ? idle : deselected;    
                 }
                 Handles.DrawSolidDisc(thisPoint, Vector3.up, BC.handleRadius);
                 
@@ -304,6 +345,8 @@ public class BuildingCreatorEditor : Editor {
                 if (BC.showOutlines){
                     if (currentBuildingIsSelected) {
                         Handles.color = (thisPointIsBeingDragged) ? dragged : activeLine;
+                    } else {
+                        Handles.color = deselected;
                     }
                     Handles.DrawDottedLine(thisPoint, aboveThisPoint, 4f);
                 }
