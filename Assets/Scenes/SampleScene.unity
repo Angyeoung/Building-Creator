@@ -334,10 +334,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   buildings:
   - points:
-    - {x: 13.222702, y: 0, z: 11.61784}
-    - {x: 10.592882, y: 0, z: 6.679142}
-    - {x: 8.084774, y: 0, z: 8.807732}
-    - {x: 8.093326, y: 0, z: 13.829314}
+    - {x: 17.048717, y: 0, z: 7.685381}
+    - {x: 12.045063, y: 0, z: 6.7154045}
+    - {x: 9.816757, y: 0, z: 11.069089}
+    - {x: 12.278168, y: 0, z: 13.187156}
+    - {x: 16.794846, y: 0.0000009536743, z: 11.375833}
     mesh: {fileID: 0}
     buildingMaterial: {fileID: 0}
     window: {fileID: 0}
@@ -346,8 +347,22 @@ MonoBehaviour:
     edgeOffset: 0
     gap: 0
     height: 5
-  showBuildingsList: 0
+  - points:
+    - {x: 2.0697422, y: 0, z: 10.501474}
+    - {x: -3.7785406, y: 0, z: 10.423134}
+    - {x: -0.41357136, y: 0, z: 16.328781}
+    mesh: {fileID: 0}
+    buildingMaterial: {fileID: 0}
+    window: {fileID: 0}
+    door: {fileID: 0}
+    inverted: 0
+    edgeOffset: 0
+    gap: 0
+    height: 5
   handleRadius: 0.5
+  showBuildingsList: 1
+  showOutlines: 1
+  showSelectionInfo: 1
 --- !u!23 &2114273859
 MeshRenderer:
   m_ObjectHideFlags: 0

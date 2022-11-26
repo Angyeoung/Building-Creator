@@ -27,7 +27,7 @@ public class BuildingCreator : MonoBehaviour {
     [HideInInspector]
     public bool showBuildingsList = false;
     [HideInInspector]
-    public bool showVerticalLines = true;
+    public bool showOutlines = true;
     [HideInInspector]
     public bool showSelectionInfo = false; 
 
