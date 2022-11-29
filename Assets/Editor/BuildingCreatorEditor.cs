@@ -23,6 +23,7 @@ public class BuildingCreatorEditor : Editor {
         // Settings
         BC.handleRadius = EditorGUILayout.Slider("Handle Size", BC.handleRadius, 0f, 5f);
         BC.showOutlines = EditorGUILayout.Toggle("Show Outlines", BC.showOutlines);
+        BC.showMesh = EditorGUILayout.Toggle("Show Mesh", BC.showMesh);
 
         // Selection info foldout
         EditorGUILayout.Space(15f);
@@ -70,7 +71,7 @@ public class BuildingCreatorEditor : Editor {
         // Selected building info foldout
         EditorGUILayout.Space(15f);
         BC.showSelectedBuildingInfo = EditorGUILayout.Foldout(BC.showSelectedBuildingInfo, "Selected Building Info");
-        if(BC.showSelectedBuildingInfo && SelectionInfo.buildingIndex != -1) {
+        if (BC.showSelectedBuildingInfo && SelectionInfo.buildingIndex != -1) {
             // Material
             EditorGUILayout.Space();
             SelectedBuilding.buildingMaterial = (Material)EditorGUILayout.ObjectField("Material", SelectedBuilding.buildingMaterial, typeof(Material), true);
@@ -352,7 +353,86 @@ public class BuildingCreatorEditor : Editor {
                 }
             }
         }
+        if (BC.showMesh) {
+            ClearMesh();
+            CalculateMesh();
+            SetMesh();
+        } else {
+            ClearMesh();
+        }
         buildingHasChanged = false;
+    }
+
+    // Create mesh of all buildings
+    void CalculateMesh() {
+        for (int currentBuildingIndex = 0; currentBuildingIndex < BC.buildings.Count; currentBuildingIndex++) {
+            Building currentBuilding = BC.buildings[currentBuildingIndex];
+            currentBuilding.mesh = new Mesh();
+            currentBuilding.mesh.Clear();
+
+            Vector3[] vertices = new Vector3[currentBuilding.points.Count*2];
+            for (int i = 0; i < currentBuilding.points.Count; i++) {
+                vertices[i*2] = currentBuilding.points[i];
+                vertices[i*2 + 1] = currentBuilding.points[i] + Vector3.up * currentBuilding.height;
+            }
+
+            int[] triangles = new int[6 * currentBuilding.points.Count];
+            
+            for (int i = 0, tris = 0; i < vertices.Length; i+=2) {
+                int i1, i2, i3;
+                if (currentBuilding.inverted) {
+                    i1 = (i+1) % vertices.Length;
+                    i2 = (i+2) % vertices.Length;
+                    i3 = (i+3) % vertices.Length;
+                } else {
+                    i1 = (i+2) % vertices.Length;
+                    i2 = (i+1) % vertices.Length;
+                    i3 = (i+3) % vertices.Length;
+                }
+                triangles[tris + 0] = i;
+                triangles[tris + 1] = i1;
+                triangles[tris + 2] = i2;
+                triangles[tris + 3] = i2;
+                triangles[tris + 4] = i1;
+                triangles[tris + 5] = i3;
+                tris += 6;
+            }
+
+            // Make roof
+
+            currentBuilding.mesh.vertices = vertices;
+            currentBuilding.mesh.triangles = triangles;
+        }
+    }
+
+    // Update shared mesh
+    void SetMesh() {
+        BC.meshFilter.sharedMesh.Clear();
+        CombineInstance[] meshes = new CombineInstance[BC.buildings.Count];
+        for (int i = 0; i < BC.buildings.Count; i++) {
+            meshes[i].mesh = BC.buildings[i].mesh;
+        }
+        BC.meshFilter.sharedMesh.CombineMeshes(meshes, false, false, false);
+        BC.meshFilter.sharedMesh.RecalculateNormals();
+        BC.meshFilter.sharedMesh.RecalculateBounds();  
+
+        // Materials
+        List<Material> materials = new List<Material>();
+        materials.Clear();
+        for (int i = 0; i < BC.buildings.Count; i++) {
+            materials.Add(BC.buildings[i].buildingMaterial);
+        }
+        BC.meshRenderer.sharedMaterials = materials.ToArray();
+    }
+
+    // Clear shared mesh
+    void ClearMesh() {
+        BC.meshFilter.sharedMesh.Clear();
+    }
+
+    // Sets mesh filter and stuff
+    void FixMesh() {
+        BC.meshFilter.mesh = new Mesh();
     }
 
     // When the editor is enabled

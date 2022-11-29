@@ -8,12 +8,19 @@ using UnityEngine;
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class BuildingCreator : MonoBehaviour {
 
+    public MeshFilter meshFilter;
+    public MeshRenderer meshRenderer;
+
     // Singleton functionality
     // https://gamedevbeginner.com/singletons-in-unity-the-right-way/
     public static BuildingCreator main { get; private set; }
     void OnEnable() {
         if (main == null) {
             main = this;
+            meshFilter = this.gameObject.GetComponent<MeshFilter>();
+            meshFilter.mesh = new Mesh();
+            meshRenderer = this.gameObject.GetComponent<MeshRenderer>();
+            this.gameObject.transform.position = Vector3.zero;
         }
     }
 
@@ -23,9 +30,11 @@ public class BuildingCreator : MonoBehaviour {
     // Settings
     public float handleRadius = 0.5f;
     public bool showOutlines = true;
+    public bool showMesh = false;
     public bool showSelectionInfo = false; 
     public bool showBuildingsList = false;
     public bool showSelectedBuildingInfo = false;
+    public bool showMeshInfo = false;
 
 }
 
