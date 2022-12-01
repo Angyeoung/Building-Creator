@@ -367,17 +367,15 @@ public class BuildingCreatorEditor : Editor {
     void CalculateMesh() {
         for (int currentBuildingIndex = 0; currentBuildingIndex < BC.buildings.Count; currentBuildingIndex++) {
             Building currentBuilding = BC.buildings[currentBuildingIndex];
+            Vector3[] vertices = new Vector3[currentBuilding.points.Count*2];
             currentBuilding.mesh = new Mesh();
             currentBuilding.mesh.Clear();
-
-            Vector3[] vertices = new Vector3[currentBuilding.points.Count*2];
             for (int i = 0; i < currentBuilding.points.Count; i++) {
                 vertices[i*2] = currentBuilding.points[i];
                 vertices[i*2 + 1] = currentBuilding.points[i] + Vector3.up * currentBuilding.height;
             }
 
             int[] triangles = new int[6 * currentBuilding.points.Count];
-            
             for (int i = 0, tris = 0; i < vertices.Length; i+=2) {
                 int i1, i2, i3;
                 if (currentBuilding.inverted) {
@@ -399,6 +397,10 @@ public class BuildingCreatorEditor : Editor {
             }
 
             // Make roof
+            // Clip ears, add them to triangles
+            // Remember to increase the size of the triangles array
+            // Be very careful with changing array sizes
+
 
             currentBuilding.mesh.vertices = vertices;
             currentBuilding.mesh.triangles = triangles;
