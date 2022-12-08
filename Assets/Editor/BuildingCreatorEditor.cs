@@ -10,7 +10,8 @@ using UnityEditor;
 public class BuildingCreatorEditor : Editor {
 
     // Used to repaint views / remake meshes
-    bool buildingHasChanged = false;
+    bool buildingHasChanged = true;
+    bool meshHasChanged = true;
 
     // Custom inspector
     public override void OnInspectorGUI() {
@@ -25,10 +26,12 @@ public class BuildingCreatorEditor : Editor {
         BC.showOutlines = EditorGUILayout.Toggle("Show Outlines", BC.showOutlines);
         BC.showMesh = EditorGUILayout.Toggle("Show Mesh", BC.showMesh);
 
-        // Selection info foldout
+        // Debug info foldout
         EditorGUILayout.Space(15f);
-        BC.showSelectionInfo = EditorGUILayout.Foldout(BC.showSelectionInfo, "Selection Info");
+        BC.showSelectionInfo = EditorGUILayout.Foldout(BC.showSelectionInfo, "Debug Info");
         if (BC.showSelectionInfo) {
+            BC.debugNormals = EditorGUILayout.Toggle("Show Normals", BC.debugNormals);
+            EditorGUILayout.Space(5f);
             EditorGUILayout.Toggle("Mouse over line?", SelectionInfo.mouseIsOverLine);
             EditorGUILayout.Toggle("Mouse over point?", SelectionInfo.mouseIsOverPoint);
             EditorGUILayout.Toggle("Point being dragged?", SelectionInfo.pointIsBeingDragged);
@@ -38,6 +41,9 @@ public class BuildingCreatorEditor : Editor {
             EditorGUILayout.IntField("Mouse Over Point Index", SelectionInfo.mouseOverPointIndex);
             EditorGUILayout.Space(5f);
             EditorGUILayout.IntField("Selected Building Index", SelectionInfo.buildingIndex);
+            if (SelectionInfo.buildingIndex > -1) {
+                EditorGUILayout.FloatField("Selected Building Area", SelectedBuilding.points.ToXZ().FindArea2D());
+            }
         }
 
         // Buildings list foldout
@@ -101,6 +107,7 @@ public class BuildingCreatorEditor : Editor {
         // If settings were changed repaint Scene view
         if (GUI.changed) {
             buildingHasChanged = true;
+            meshHasChanged = true;
             SceneView.RepaintAll();
         }
     
@@ -171,6 +178,7 @@ public class BuildingCreatorEditor : Editor {
                 SelectionInfo.pointIsBeingDragged = false;
 
                 buildingHasChanged = true;
+                meshHasChanged = true;
             }
         }
 
@@ -191,6 +199,7 @@ public class BuildingCreatorEditor : Editor {
             if (SelectionInfo.mouseOverPointIndex != -1) {
                 SelectedBuilding.points[SelectionInfo.mouseOverPointIndex] = mousePosition;
                 buildingHasChanged = true;
+                meshHasChanged = true;
             }
         }
 
@@ -252,7 +261,7 @@ public class BuildingCreatorEditor : Editor {
 
         // Create new building
         void CreateNewBuilding() {
-            Undo.RecordObject(BuildingCreator.main, "Create Building");
+            Undo.RecordObject(BC, "Create Building");
             BC.buildings.Add(new Building());
             SelectionInfo.buildingIndex = BC.buildings.Count - 1;
         }
@@ -265,7 +274,6 @@ public class BuildingCreatorEditor : Editor {
             SelectedBuilding.points.Insert(newPointIndex, mousePosition);
             SelectionInfo.mouseOverPointIndex = newPointIndex;
             SelectionInfo.mouseOverBuildingIndex = SelectionInfo.buildingIndex;
-            buildingHasChanged = true;
             SelectPointUnderMouse();
         }
 
@@ -285,6 +293,7 @@ public class BuildingCreatorEditor : Editor {
             SelectionInfo.mouseOverLineIndex = -1;
             SelectionInfo.positionAtDragStart = SelectedBuilding.points[SelectionInfo.mouseOverPointIndex];
             buildingHasChanged = true;
+            meshHasChanged = true;
         }
 
         // Delete point under mouse
@@ -298,6 +307,8 @@ public class BuildingCreatorEditor : Editor {
             }
             SelectionInfo.pointIsBeingDragged = false;
             SelectionInfo.mouseIsOverPoint = false;
+            buildingHasChanged = true;
+            meshHasChanged = true;
         }
 
     }
@@ -309,6 +320,19 @@ public class BuildingCreatorEditor : Editor {
             bool currentBuildingIsSelected = (buildingIndex == SelectionInfo.buildingIndex);
             bool mouseIsOverCurrentBuilding = (buildingIndex == SelectionInfo.mouseOverBuildingIndex);
 
+            // Normals debug
+            if (BC.debugNormals) {
+                for (int j = 0; j < currentBuilding.points.Count; j++) {
+                    Handles.color = Color.white;
+                    Vector3 p1 = currentBuilding.points[j];
+                    Vector3 p2 = currentBuilding.mesh.normals[j * 2];
+                    Handles.DrawLine(p1, (p1 + p2 * 4));
+                    p1 = currentBuilding.points[j] + Vector3.up * currentBuilding.height;
+                    p2 = currentBuilding.mesh.normals[j * 2 + 1];
+                    Handles.DrawLine(p1, (p1 + p2 * 4));
+                }
+            }
+            
             // For each point in this building
             for (int i = 0; i < currentBuilding.points.Count; i++) {
                 Color deselected = Color.gray, activeLine = Color.red, 
@@ -353,70 +377,74 @@ public class BuildingCreatorEditor : Editor {
                 }
             }
         }
-        if (BC.showMesh) {
+        if (BC.showMesh && meshHasChanged) {
             ClearMesh();
-            CalculateMesh();
-            SetMesh();
-        } else {
+            SetBuildingMeshes();
+            UpdateComponents();
+        } else if (!BC.showMesh) {
             ClearMesh();
         }
+        meshHasChanged = false;
         buildingHasChanged = false;
     }
 
     // Create mesh of all buildings
-    void CalculateMesh() {
+    void SetBuildingMeshes() {
         for (int currentBuildingIndex = 0; currentBuildingIndex < BC.buildings.Count; currentBuildingIndex++) {
             Building currentBuilding = BC.buildings[currentBuildingIndex];
-            Vector3[] vertices = new Vector3[currentBuilding.points.Count*2];
+            List<Vector3> vertices = new List<Vector3>();
+            List<int> triangles = new List<int>();
+            List<int> roofIndexList = new List<int>();
+            
+            // Set mesh
             currentBuilding.mesh = new Mesh();
             currentBuilding.mesh.Clear();
+            
+            // Set variables
             for (int i = 0; i < currentBuilding.points.Count; i++) {
-                vertices[i*2] = currentBuilding.points[i];
-                vertices[i*2 + 1] = currentBuilding.points[i] + Vector3.up * currentBuilding.height;
+                roofIndexList.Add(i * 2 + 1);
+                vertices.Add(currentBuilding.points[i]);
+                vertices.Add(currentBuilding.points[i] + Vector3.up * currentBuilding.height);
             }
 
-            int[] triangles = new int[6 * currentBuilding.points.Count];
-            for (int i = 0, tris = 0; i < vertices.Length; i+=2) {
+            // Wall triangles
+            for (int i = 0; i < vertices.Count; i+=2) {
                 int i1, i2, i3;
                 if (currentBuilding.inverted) {
-                    i1 = (i+1) % vertices.Length;
-                    i2 = (i+2) % vertices.Length;
-                    i3 = (i+3) % vertices.Length;
+                    i1 = (i+1) % vertices.Count;
+                    i2 = (i+2) % vertices.Count;
+                    i3 = (i+3) % vertices.Count;
                 } else {
-                    i1 = (i+2) % vertices.Length;
-                    i2 = (i+1) % vertices.Length;
-                    i3 = (i+3) % vertices.Length;
+                    i1 = (i+2) % vertices.Count;
+                    i2 = (i+1) % vertices.Count;
+                    i3 = (i+3) % vertices.Count;
                 }
-                triangles[tris + 0] = i;
-                triangles[tris + 1] = i1;
-                triangles[tris + 2] = i2;
-                triangles[tris + 3] = i2;
-                triangles[tris + 4] = i1;
-                triangles[tris + 5] = i3;
-                tris += 6;
+                int[] a = {i, i1, i2, i2, i1, i3};
+                triangles.AddRange(a);
             }
 
-            // Make roof
-            // Clip ears, add them to triangles
-            // Remember to increase the size of the triangles array
-            // Be very careful with changing array sizes
+            // Roof triangles
+            if (currentBuilding.points != null && currentBuilding.points.Count > 2) {
+                List<int> flat = currentBuilding.points.ToXZ().Triangulate();
+                if (flat != null)
+                    triangles.AddRange(flat.Map(a => roofIndexList[a]));
+            }
 
-
-            currentBuilding.mesh.vertices = vertices;
-            currentBuilding.mesh.triangles = triangles;
+            // Apply to mesh
+            currentBuilding.mesh.vertices = vertices.ToArray();
+            currentBuilding.mesh.triangles = triangles.ToArray();
+            currentBuilding.mesh.RecalculateNormals();
         }
     }
 
     // Update shared mesh
-    void SetMesh() {
+    void UpdateComponents() {
         BC.meshFilter.sharedMesh.Clear();
         CombineInstance[] meshes = new CombineInstance[BC.buildings.Count];
         for (int i = 0; i < BC.buildings.Count; i++) {
             meshes[i].mesh = BC.buildings[i].mesh;
         }
-        BC.meshFilter.sharedMesh.CombineMeshes(meshes, false, false, false);
-        BC.meshFilter.sharedMesh.RecalculateNormals();
-        BC.meshFilter.sharedMesh.RecalculateBounds();  
+        BC.meshFilter.sharedMesh.CombineMeshes(meshes, false, false, true);
 
         // Materials
         List<Material> materials = new List<Material>();

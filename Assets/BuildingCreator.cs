@@ -31,6 +31,7 @@ public class BuildingCreator : MonoBehaviour {
     public float handleRadius = 0.5f;
     public bool showOutlines = true;
     public bool showMesh = false;
+    public bool debugNormals = false;
     public bool showSelectionInfo = false; 
     public bool showBuildingsList = false;
     public bool showSelectedBuildingInfo = false;
