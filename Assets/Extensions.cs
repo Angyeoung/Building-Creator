@@ -48,7 +48,7 @@ public static class Extensions {
     public static List<T> Map<T>(this List<T> list, Func<T, T> func) {
         List<T> temp = new List<T>(list);
         for (int i = 0; i < temp.Count; i++) {
-            temp[i] = func(temp[i]);
+            temp[i] = func(list[i]);
         }
         return temp;
     }
@@ -66,17 +66,19 @@ public static class Extensions {
         float w1 = (a.x * (c.y - a.y) + (p.y - a.y) * (c.x - a.x) - p.x * (c.y - a.y)) / d1;
         float w2 = (p.y - a.y - w1 * (b.y - a.y)) / d2;
 
-        if (w1 >= 0 && w2 >= 0 && (w1 + w2) <= 1)
+        if (w1 >= 0 && w2 >= 0 && (w1 + w2) <= 1) {
             return true;
+        }
         return false;
 
     }
 
-    // Given a list of points with custom indices, return the triangulated list of points with their custom indices
+    // Given a list of points, return the triangulated list of points
     public static List<int> Triangulate(this List<Vector2> points) {
         // Checks
-        if (points == null || points.Count < 3)
+        if (points == null || points.Count < 3) {
             return null;
+        }
 
         // Fill indexList
         List<int> result = new List<int>();
@@ -87,7 +89,7 @@ public static class Extensions {
 
         // Clip ears
         int attempts = 0;
-        while(indexList.Count > 3 && attempts < points.Count * points.Count + 20) {
+        while(indexList.Count > 3) {
             for (int i = 0; i < indexList.Count; i++) {
                 int a = indexList.GetItem(i);
                 int b = indexList.GetItem(i - 1);
@@ -97,28 +99,22 @@ public static class Extensions {
                 Vector2 vc = points[c];
                 Vector2 vavb = vb - va;
                 Vector2 vavc = vc - va;
-
+                bool ear = true;
                 // Is ear test vertex convex?
                 if(vavb.Cross(vavc) < 0f) {
                     continue;
                 }
-
-                bool ear = true;
-
                 // Does test ear contain any polygon vertices?
                 for(int j = 0; j < points.Count; j++) {
                     if(j == a || j == b || j == c) {
                         continue;
                     }
-
                     Vector2 p = points.GetItem(j);
-
                     if(p.InTriangle(vb, va, vc)) {
                         ear = false;
                         break;
                     }                            
                 }
-
                 // If the ear is valid, clip it
                 if(ear) {
                     int[] bac = {b, a, c};
@@ -128,6 +124,9 @@ public static class Extensions {
                 }
             }
             attempts++;
+            if (attempts > points.Count * points.Count + 20) {
+                break;
+            }
         }
 
         int[] last = {indexList[0], indexList[1], indexList[2]};

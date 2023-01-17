@@ -31,7 +31,6 @@ public class BuildingCreator : MonoBehaviour {
     public float handleRadius = 0.5f;
     public bool showOutlines = true;
     public bool showMesh = false;
-    public bool debugNormals = false;
     public bool showSelectionInfo = false; 
     public bool showBuildingsList = false;
     public bool showSelectedBuildingInfo = false;
@@ -47,7 +46,7 @@ public class Building {
     public List<Vector3> points = new List<Vector3>();
     
     // Mesh of the building
-    public Mesh mesh;
+    public Mesh mesh = null;
     // Material of the building
     public Material buildingMaterial;
     // Windows and doors

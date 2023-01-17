@@ -30,7 +30,6 @@ public class BuildingCreatorEditor : Editor {
         EditorGUILayout.Space(15f);
         BC.showSelectionInfo = EditorGUILayout.Foldout(BC.showSelectionInfo, "Debug Info");
         if (BC.showSelectionInfo) {
-            BC.debugNormals = EditorGUILayout.Toggle("Show Normals", BC.debugNormals);
             EditorGUILayout.Space(5f);
             EditorGUILayout.Toggle("Mouse over line?", SelectionInfo.mouseIsOverLine);
             EditorGUILayout.Toggle("Mouse over point?", SelectionInfo.mouseIsOverPoint);
@@ -264,6 +263,7 @@ public class BuildingCreatorEditor : Editor {
             Undo.RecordObject(BC, "Create Building");
             BC.buildings.Add(new Building());
             SelectionInfo.buildingIndex = BC.buildings.Count - 1;
+            meshHasChanged = true;
         }
         
         // Create new point
@@ -282,6 +282,7 @@ public class BuildingCreatorEditor : Editor {
             if (SelectionInfo.mouseOverBuildingIndex != -1) {
                 SelectionInfo.buildingIndex = SelectionInfo.mouseOverBuildingIndex;
                 buildingHasChanged = true;
+                meshHasChanged = true;
             }
         }
 
@@ -319,19 +320,6 @@ public class BuildingCreatorEditor : Editor {
             Building currentBuilding = BC.buildings[buildingIndex];
             bool currentBuildingIsSelected = (buildingIndex == SelectionInfo.buildingIndex);
             bool mouseIsOverCurrentBuilding = (buildingIndex == SelectionInfo.mouseOverBuildingIndex);
-
-            // Normals debug
-            if (BC.debugNormals) {
-                for (int j = 0; j < currentBuilding.points.Count; j++) {
-                    Handles.color = Color.white;
-                    Vector3 p1 = currentBuilding.points[j];
-                    Vector3 p2 = currentBuilding.mesh.normals[j * 2];
-                    Handles.DrawLine(p1, (p1 + p2 * 4));
-                    p1 = currentBuilding.points[j] + Vector3.up * currentBuilding.height;
-                    p2 = currentBuilding.mesh.normals[j * 2 + 1];
-                    Handles.DrawLine(p1, (p1 + p2 * 4));
-                }
-            }
             
             // For each point in this building
             for (int i = 0; i < currentBuilding.points.Count; i++) {
@@ -391,49 +379,71 @@ public class BuildingCreatorEditor : Editor {
     // Create mesh of all buildings
     void SetBuildingMeshes() {
         for (int currentBuildingIndex = 0; currentBuildingIndex < BC.buildings.Count; currentBuildingIndex++) {
+            // Current building of this iteration of the loop
             Building currentBuilding = BC.buildings[currentBuildingIndex];
+            // Bool to signify the winding order of the buildings points
+            bool isClockWise = currentBuilding.points.ToXZ().FindArea2D() > 0;
+            // List of vertices of the building
             List<Vector3> vertices = new List<Vector3>();
+            // List of triangles of the building
             List<int> triangles = new List<int>();
-            List<int> roofIndexList = new List<int>();
+            // Height of the building
+            Vector3 h = currentBuilding.height * Vector3.up;
             
-            // Set mesh
+            // Clear mesh
             currentBuilding.mesh = new Mesh();
             currentBuilding.mesh.Clear();
             
-            // Set variables
-            for (int i = 0; i < currentBuilding.points.Count; i++) {
-                roofIndexList.Add(i * 2 + 1);
-                vertices.Add(currentBuilding.points[i]);
-                vertices.Add(currentBuilding.points[i] + Vector3.up * currentBuilding.height);
-            }
-
             // Wall triangles
-            for (int i = 0; i < vertices.Count; i+=2) {
-                int i1, i2, i3;
-                if (currentBuilding.inverted) {
-                    i1 = (i+1) % vertices.Count;
-                    i2 = (i+2) % vertices.Count;
-                    i3 = (i+3) % vertices.Count;
-                } else {
-                    i1 = (i+2) % vertices.Count;
-                    i2 = (i+1) % vertices.Count;
-                    i3 = (i+3) % vertices.Count;
+            for (int currentPointIndex = 0, totalVerts = 0; currentPointIndex < currentBuilding.points.Count; currentPointIndex++) {
+                // First point
+                Vector3 p0 = currentBuilding.points.GetItem(currentPointIndex);     
+                // Second point (above first point)
+                Vector3 p1 = p0 + h;
+                // Third point
+                Vector3 p2 = currentBuilding.points.GetItem(currentPointIndex + 1);
+                // Fourth point (above third point)
+                Vector3 p3 = p2 + h;
+                // Temp array for wall points
+                Vector3[] verts = {p0, p1, p2, p3};
+                // Temp list for wall triangles
+                List<int> tris = new List<int>{totalVerts, totalVerts + 2, totalVerts + 1, totalVerts + 1, totalVerts + 2, totalVerts + 3};
+                // Reverse tris list if the building's winding order is counter-clockwise
+                if (!isClockWise) {
+                    tris.Reverse();
                 }
-                int[] a = {i, i1, i2, i2, i1, i3};
-                triangles.AddRange(a);
+                // Reverse tris list if the building's inverted option is checked
+                if (currentBuilding.inverted) {
+                    tris.Reverse();
+                }
+                // Add temp array/list to their respective array/list
+                vertices.AddRange(verts);
+                triangles.AddRange(tris);
+                // Increment total vertex count
+                totalVerts += 4;
             }
 
             // Roof triangles
             if (currentBuilding.points != null && currentBuilding.points.Count > 2) {
-                List<int> flat = currentBuilding.points.ToXZ().Triangulate();
-                if (flat != null)
-                    triangles.AddRange(flat.Map(a => roofIndexList[a]));
+                // Temp roof vertices array
+                List<Vector3> verts = currentBuilding.points.Map(a => a + h);
+                if (verts.ToXZ().FindArea2D() < 0) {
+                    verts.Reverse();
+                }
+                // Temp roof triangles list
+                List<int> tris = verts.ToXZ().Triangulate().Map(a => a + vertices.Count);
+                // Reverse tris list if the building's inverted option is checked
+                if (currentBuilding.inverted) {
+                    tris.Reverse();
+                }
+                // Add temp array/list to their respective array/list
+                vertices.AddRange(verts);
+                triangles.AddRange(tris);
             }
 
             // Apply to mesh
             currentBuilding.mesh.vertices = vertices.ToArray();
             currentBuilding.mesh.triangles = triangles.ToArray();
-            currentBuilding.mesh.RecalculateNormals();
         }
     }
 
@@ -444,7 +454,8 @@ public class BuildingCreatorEditor : Editor {
         for (int i = 0; i < BC.buildings.Count; i++) {
             meshes[i].mesh = BC.buildings[i].mesh;
         }
-        BC.meshFilter.sharedMesh.CombineMeshes(meshes, false, false, true);
+        BC.meshFilter.sharedMesh.CombineMeshes(meshes, false, false, false);
+        BC.meshFilter.sharedMesh.RecalculateNormals();
 
         // Materials
         List<Material> materials = new List<Material>();
@@ -458,11 +469,6 @@ public class BuildingCreatorEditor : Editor {
     // Clear shared mesh
     void ClearMesh() {
         BC.meshFilter.sharedMesh.Clear();
-    }
-
-    // Sets mesh filter and stuff
-    void FixMesh() {
-        BC.meshFilter.mesh = new Mesh();
     }
 
     // When the editor is enabled
