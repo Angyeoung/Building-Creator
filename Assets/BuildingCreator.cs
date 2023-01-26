@@ -30,11 +30,13 @@ public class BuildingCreator : MonoBehaviour {
     // Settings
     public float handleRadius = 0.5f;
     public bool showOutlines = true;
+    public bool showGuides = false;
     public bool showMesh = false;
+
+    // Dropdowns
     public bool showSelectionInfo = false; 
     public bool showBuildingsList = false;
     public bool showSelectedBuildingInfo = false;
-    public bool showMeshInfo = false;
 
 }
 
@@ -53,11 +55,20 @@ public class Building {
     public GameObject window;
     public GameObject door;
 
-    // Settings
+    // Building Settings
     public bool inverted = false;
-    public float edgeOffset;
-    public float gap;
     public float height = 5;
+
+    // Window settings
+    public float windowHeight;
+    public float windowWidth;
+    // Offsets
+    public float topOffset = 0;
+    public float bottomOffset = 0;
+    public float edgeOffset = 0;
+    // Gaps
+    public float horizontalGap = 1;
+    public float verticalGap = 1;
 
 }
 

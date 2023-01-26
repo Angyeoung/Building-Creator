@@ -21,13 +21,7 @@ public class BuildingCreatorEditor : Editor {
         Rect rect = GUILayoutUtility.GetRect(18, 18, 30f, 30f);
         EditorGUI.ProgressBar(rect, 1, "Building Creator");
 
-        // Settings
-        BC.handleRadius = EditorGUILayout.Slider("Handle Size", BC.handleRadius, 0f, 5f);
-        BC.showOutlines = EditorGUILayout.Toggle("Show Outlines", BC.showOutlines);
-        BC.showMesh = EditorGUILayout.Toggle("Show Mesh", BC.showMesh);
-
         // Debug info foldout
-        EditorGUILayout.Space(15f);
         BC.showSelectionInfo = EditorGUILayout.Foldout(BC.showSelectionInfo, "Debug Info");
         if (BC.showSelectionInfo) {
             EditorGUILayout.Space(5f);
@@ -44,6 +38,12 @@ public class BuildingCreatorEditor : Editor {
                 EditorGUILayout.FloatField("Selected Building Area", SelectedBuilding.points.ToXZ().FindArea2D());
             }
         }
+
+        // Settings
+        EditorGUILayout.Space(15f);
+        BC.handleRadius = EditorGUILayout.Slider("Handle Size", BC.handleRadius, 0f, 10f);
+        BC.showOutlines = EditorGUILayout.Toggle("Show Outlines", BC.showOutlines);
+        BC.showMesh = EditorGUILayout.Toggle("Show Mesh", BC.showMesh);
 
         // Buildings list foldout
         EditorGUILayout.Space(15f);
@@ -77,22 +77,30 @@ public class BuildingCreatorEditor : Editor {
         EditorGUILayout.Space(15f);
         BC.showSelectedBuildingInfo = EditorGUILayout.Foldout(BC.showSelectedBuildingInfo, "Selected Building Info");
         if (BC.showSelectedBuildingInfo && SelectionInfo.buildingIndex != -1) {
+            
             // Material
             EditorGUILayout.Space();
             SelectedBuilding.buildingMaterial = (Material)EditorGUILayout.ObjectField("Material", SelectedBuilding.buildingMaterial, typeof(Material), true);
 
             // Assets
-            EditorGUILayout.Space();
-            SelectedBuilding.door = (GameObject)EditorGUILayout.ObjectField("Door", SelectedBuilding.door, typeof(GameObject), true);
-            SelectedBuilding.window = (GameObject)EditorGUILayout.ObjectField("Window", SelectedBuilding.window, typeof(GameObject), true);
+            // EditorGUILayout.Space();
+            // SelectedBuilding.door = (GameObject)EditorGUILayout.ObjectField("Door", SelectedBuilding.door, typeof(GameObject), true);
+            // SelectedBuilding.window = (GameObject)EditorGUILayout.ObjectField("Window", SelectedBuilding.window, typeof(GameObject), true);
 
+            // Options
             EditorGUILayout.Space();
             SelectedBuilding.inverted = EditorGUILayout.Toggle("Inverted", SelectedBuilding.inverted);
-
+            SelectedBuilding.height = EditorGUILayout.FloatField("Building Height", SelectedBuilding.height);
             EditorGUILayout.Space();
+            SelectedBuilding.topOffset = EditorGUILayout.FloatField("Top Offset", SelectedBuilding.topOffset);
+            SelectedBuilding.bottomOffset = EditorGUILayout.FloatField("Bottom Offset", SelectedBuilding.bottomOffset);
             SelectedBuilding.edgeOffset = EditorGUILayout.FloatField("Edge Offset", SelectedBuilding.edgeOffset);
-            SelectedBuilding.gap = EditorGUILayout.FloatField("Gap", SelectedBuilding.gap);
-            SelectedBuilding.height = EditorGUILayout.FloatField("Height", SelectedBuilding.height);
+            EditorGUILayout.Space();
+            SelectedBuilding.windowHeight = EditorGUILayout.FloatField("Window Height", SelectedBuilding.windowHeight);
+            SelectedBuilding.windowWidth = EditorGUILayout.FloatField("Window Width", SelectedBuilding.windowWidth);
+            EditorGUILayout.Space();
+            SelectedBuilding.verticalGap = EditorGUILayout.FloatField("Vertical Gap", SelectedBuilding.verticalGap);
+            SelectedBuilding.horizontalGap = EditorGUILayout.FloatField("Horizontal Gap", SelectedBuilding.horizontalGap);
         }
 
         // Delete buildings if needed (While maintaining proper selection)
@@ -316,6 +324,7 @@ public class BuildingCreatorEditor : Editor {
 
     // Draws lines and discs to the scene view
     void Draw() {
+        // For each building
         for (int buildingIndex = 0; buildingIndex < BC.buildings.Count; buildingIndex++) {    
             Building currentBuilding = BC.buildings[buildingIndex];
             bool currentBuildingIsSelected = (buildingIndex == SelectionInfo.buildingIndex);
@@ -356,13 +365,21 @@ public class BuildingCreatorEditor : Editor {
                 
                 // Draw Vertical Lines
                 if (BC.showOutlines){
-                    if (currentBuildingIsSelected) {
-                        Handles.color = (thisPointIsBeingDragged) ? dragged : activeLine;
+                    if (thisPointIsBeingDragged) {
+                        Handles.color = dragged;
+                    } else if (mouseIsOverThisPoint) {
+                        Handles.color = hover;
+                    } else if (currentBuildingIsSelected) {
+                        Handles.color = activeLine;
                     } else {
                         Handles.color = deselected;
                     }
                     Handles.DrawDottedLine(thisPoint, aboveThisPoint, 4f);
                 }
+                // Case 1: The line is being dragged (dragged)
+                // Case 2: Mouse is over this point (hover)
+                // Case 3: Current bulding selected (activeLine)
+                // Case 4: Default (deselected)
             }
         }
         if (BC.showMesh && meshHasChanged) {
