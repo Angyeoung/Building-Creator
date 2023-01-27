@@ -32,6 +32,7 @@ public class BuildingCreator : MonoBehaviour {
     public bool showOutlines = true;
     public bool showGuides = false;
     public bool showMesh = false;
+    public bool showWindows = false;
 
     // Dropdowns
     public bool showSelectionInfo = false; 
@@ -40,11 +41,11 @@ public class BuildingCreator : MonoBehaviour {
 
 }
 
-// Building information and settings
-
+// Class for individual building
 [System.Serializable]
 public class Building {
-    // List of points for the building
+
+    // List of points for the buildin
     public List<Vector3> points = new List<Vector3>();
     
     // Mesh of the building

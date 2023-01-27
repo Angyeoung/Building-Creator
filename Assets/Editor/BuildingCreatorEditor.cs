@@ -25,9 +25,9 @@ public class BuildingCreatorEditor : Editor {
         BC.showSelectionInfo = EditorGUILayout.Foldout(BC.showSelectionInfo, "Debug Info");
         if (BC.showSelectionInfo) {
             EditorGUILayout.Space(5f);
-            EditorGUILayout.Toggle("Mouse over line?", SelectionInfo.mouseIsOverLine);
-            EditorGUILayout.Toggle("Mouse over point?", SelectionInfo.mouseIsOverPoint);
-            EditorGUILayout.Toggle("Point being dragged?", SelectionInfo.pointIsBeingDragged);
+            EditorGUILayout.ToggleLeft("Mouse over line?", SelectionInfo.mouseIsOverLine);
+            EditorGUILayout.ToggleLeft("Mouse over point?", SelectionInfo.mouseIsOverPoint);
+            EditorGUILayout.ToggleLeft("Point being dragged?", SelectionInfo.pointIsBeingDragged);
             EditorGUILayout.Space(5f);
             EditorGUILayout.IntField("Mouse Over Building Index", SelectionInfo.mouseOverBuildingIndex);
             EditorGUILayout.IntField("Mouse Over Line Index", SelectionInfo.mouseOverLineIndex);
@@ -37,13 +37,16 @@ public class BuildingCreatorEditor : Editor {
             if (SelectionInfo.buildingIndex > -1) {
                 EditorGUILayout.FloatField("Selected Building Area", SelectedBuilding.points.ToXZ().FindArea2D());
             }
+            
         }
 
         // Settings
         EditorGUILayout.Space(15f);
         BC.handleRadius = EditorGUILayout.Slider("Handle Size", BC.handleRadius, 0f, 10f);
-        BC.showOutlines = EditorGUILayout.Toggle("Show Outlines", BC.showOutlines);
-        BC.showMesh = EditorGUILayout.Toggle("Show Mesh", BC.showMesh);
+        BC.showOutlines = EditorGUILayout.ToggleLeft(TT("Show Outlines", "Hides/Displays building edges"), BC.showOutlines);
+        BC.showGuides = EditorGUILayout.ToggleLeft(TT("Show Guides", "Hides/Displays window guides"), BC.showGuides);
+        BC.showMesh = EditorGUILayout.ToggleLeft(TT("Show Mesh", "Hides/Displays building meshes"), BC.showMesh);
+        BC.showWindows = EditorGUILayout.ToggleLeft(TT("Show Windows", "Hides/Displays window outlines"), BC.showWindows);
 
         // Buildings list foldout
         EditorGUILayout.Space(15f);
@@ -87,14 +90,14 @@ public class BuildingCreatorEditor : Editor {
             // SelectedBuilding.door = (GameObject)EditorGUILayout.ObjectField("Door", SelectedBuilding.door, typeof(GameObject), true);
             // SelectedBuilding.window = (GameObject)EditorGUILayout.ObjectField("Window", SelectedBuilding.window, typeof(GameObject), true);
 
-            // Options
+            // Options 
             EditorGUILayout.Space();
-            SelectedBuilding.inverted = EditorGUILayout.Toggle("Inverted", SelectedBuilding.inverted);
+            SelectedBuilding.inverted = EditorGUILayout.ToggleLeft(TT("Inverted", "Inverts building faces"), SelectedBuilding.inverted);
             SelectedBuilding.height = EditorGUILayout.FloatField("Building Height", SelectedBuilding.height);
             EditorGUILayout.Space();
-            SelectedBuilding.topOffset = EditorGUILayout.FloatField("Top Offset", SelectedBuilding.topOffset);
-            SelectedBuilding.bottomOffset = EditorGUILayout.FloatField("Bottom Offset", SelectedBuilding.bottomOffset);
-            SelectedBuilding.edgeOffset = EditorGUILayout.FloatField("Edge Offset", SelectedBuilding.edgeOffset);
+            SelectedBuilding.topOffset = EditorGUILayout.Slider("Top Offset", SelectedBuilding.topOffset, 0f, 1 - SelectedBuilding.bottomOffset);
+            SelectedBuilding.bottomOffset = EditorGUILayout.Slider("Bottom Offset", SelectedBuilding.bottomOffset, 0f, 1 - SelectedBuilding.topOffset);
+            SelectedBuilding.edgeOffset = EditorGUILayout.Slider("Edge Offset", SelectedBuilding.edgeOffset, 0f, 1f);
             EditorGUILayout.Space();
             SelectedBuilding.windowHeight = EditorGUILayout.FloatField("Window Height", SelectedBuilding.windowHeight);
             SelectedBuilding.windowWidth = EditorGUILayout.FloatField("Window Width", SelectedBuilding.windowWidth);
@@ -322,7 +325,7 @@ public class BuildingCreatorEditor : Editor {
 
     }
 
-    // Draws lines and discs to the scene view
+    // Draws handles
     void Draw() {
         // For each building
         for (int buildingIndex = 0; buildingIndex < BC.buildings.Count; buildingIndex++) {    
@@ -376,10 +379,55 @@ public class BuildingCreatorEditor : Editor {
                     }
                     Handles.DrawDottedLine(thisPoint, aboveThisPoint, 4f);
                 }
-                // Case 1: The line is being dragged (dragged)
-                // Case 2: Mouse is over this point (hover)
-                // Case 3: Current bulding selected (activeLine)
-                // Case 4: Default (deselected)
+                
+                // Guides
+                if (BC.showGuides && currentBuildingIsSelected) {
+                    // Top and Bottom offset guides
+                    Vector3 topHeight = Vector3.up * currentBuilding.height * (1 - currentBuilding.topOffset);
+                    Vector3 bottomHeight = Vector3.up * currentBuilding.height * (currentBuilding.bottomOffset);
+                    Handles.color = Color.green;
+                    Handles.DrawDottedLine(thisPoint + topHeight, nextPoint + topHeight, 8);
+                    Handles.DrawDottedLine(thisPoint + bottomHeight, nextPoint + bottomHeight, 8);
+                    
+                    // Edge offset guides
+                    Vector3 thisToNext = nextPoint - thisPoint;
+                    Vector3 p1 = thisPoint +  thisToNext * currentBuilding.edgeOffset * 0.5f;
+                    Vector3 p2 = nextPoint + -thisToNext * currentBuilding.edgeOffset * 0.5f;
+                    Handles.color = Color.green;
+                    Handles.DrawDottedLine(p1, p1 + Vector3.up * currentBuilding.height, 8);
+                    Handles.DrawDottedLine(p2, p2 + Vector3.up * currentBuilding.height, 8);
+                }
+
+                // Windows
+                if (BC.showWindows 
+                    && currentBuildingIsSelected 
+                    && currentBuilding.edgeOffset != 1 
+                    && currentBuilding.topOffset + currentBuilding.bottomOffset < 0.99) {
+
+                    // Perpendicular lines
+                    Vector3 thisToNext = nextPoint - thisPoint;
+                    Vector3 direction = thisToNext.normalized;
+                    Vector3 perpendicular = new Vector3(-direction.z, 0, direction.x);
+                    Vector3 middle = thisPoint + thisToNext * 0.5f;
+                    Handles.color = Color.blue;
+                    Handles.DrawLine(middle, middle + perpendicular * 10);
+
+                    // Usable Space
+                    Vector3 topHeight = Vector3.up * currentBuilding.height * (1 - currentBuilding.topOffset);
+                    Vector3 bottomHeight = Vector3.up * currentBuilding.height * (currentBuilding.bottomOffset);
+                    float xAvailable = thisToNext.magnitude - thisToNext.magnitude * SelectedBuilding.edgeOffset;
+                    Handles.color = new Color(1, 0, 1);
+                    Vector3 p1 = bottomHeight + thisPoint +  direction * (thisToNext.magnitude - xAvailable) / 2;
+                    Vector3 p2 = bottomHeight + nextPoint + -direction * (thisToNext.magnitude - xAvailable) / 2;
+                    Vector3 p3 = topHeight + thisPoint +  direction * (thisToNext.magnitude - xAvailable) / 2;
+                    Vector3 p4 = topHeight + nextPoint + -direction * (thisToNext.magnitude - xAvailable) / 2;
+                    Handles.DrawLine(p1, p2, 2f);
+                    Handles.DrawLine(p3, p4, 2f);
+                    Handles.DrawLine(p1, p3, 2f);
+                    Handles.DrawLine(p2, p4, 2f);
+ 
+                }
+
             }
         }
         if (BC.showMesh && meshHasChanged) {
@@ -490,21 +538,31 @@ public class BuildingCreatorEditor : Editor {
 
     // When the editor is enabled
     void OnEnable() {
+        // Subscribe undo/redo function
         Undo.undoRedoPerformed += OnUndoOrRedo;
+        // Hides tools that get in the way during building editing
         Tools.hidden = true;
+        // Fixes a bug that causes the mesh to disappear on reload
+        meshHasChanged = true;
     }
 
     // When the editor is disabled
     void OnDisable() {
+        // Unsubscribe undo/redo function
         Undo.undoRedoPerformed -= OnUndoOrRedo;
+        // Shows tools again when script is disabled
         Tools.hidden = false;
     }
 
     // Fixes Undo/Redo bugs
     void OnUndoOrRedo() {
+        // Fixes selection index out of bounds when undoing building creation
         if (SelectionInfo.buildingIndex >= BC.buildings.Count || SelectionInfo.buildingIndex == -1) {
             SelectionInfo.buildingIndex = BC.buildings.Count - 1;
         }
+        // Update building and mesh on undo/redo
+        meshHasChanged = true;
+        buildingHasChanged = true;
     }
 
     // Shorthand for getting the building creator singleton instance
@@ -519,6 +577,11 @@ public class BuildingCreatorEditor : Editor {
         get {
             return BuildingCreator.main.buildings[SelectionInfo.buildingIndex];
         }
+    }
+
+    // Shorthand getting GUIContent with a tooltip
+    GUIContent TT(string text, string tooltip) {
+        return new GUIContent(text, tooltip);
     }
 
 }
