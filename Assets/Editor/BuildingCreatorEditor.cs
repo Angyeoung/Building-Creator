@@ -42,11 +42,11 @@ public class BuildingCreatorEditor : Editor {
 
         // Settings
         EditorGUILayout.Space(15f);
-        BC.handleRadius = EditorGUILayout.Slider("Handle Size", BC.handleRadius, 0f, 10f);
-        BC.showOutlines = EditorGUILayout.ToggleLeft(TT("Show Outlines", "Hides/Displays building edges"), BC.showOutlines);
-        BC.showGuides = EditorGUILayout.ToggleLeft(TT("Show Guides", "Hides/Displays window guides"), BC.showGuides);
-        BC.showMesh = EditorGUILayout.ToggleLeft(TT("Show Mesh", "Hides/Displays building meshes"), BC.showMesh);
+        BC.showHandles = EditorGUILayout.ToggleLeft(TT("Show Handles", "Hides/Displays shape handles"), BC.showHandles);
+        if (BC.showHandles) BC.handleRadius = EditorGUILayout.Slider("Handle Size", BC.handleRadius, 0f, 10f);
+        BC.showOutline = EditorGUILayout.ToggleLeft(TT("Show Outline", "Hides/Displays building outline"), BC.showOutline);
         BC.showWindows = EditorGUILayout.ToggleLeft(TT("Show Windows", "Hides/Displays window outlines"), BC.showWindows);
+        BC.showMesh = EditorGUILayout.ToggleLeft(TT("Show Mesh", "Hides/Displays building meshes"), BC.showMesh);
 
         // Buildings list foldout
         EditorGUILayout.Space(15f);
@@ -332,6 +332,7 @@ public class BuildingCreatorEditor : Editor {
             Building currentBuilding = BC.buildings[buildingIndex];
             bool currentBuildingIsSelected = (buildingIndex == SelectionInfo.buildingIndex);
             bool mouseIsOverCurrentBuilding = (buildingIndex == SelectionInfo.mouseOverBuildingIndex);
+            float h = currentBuilding.height;
             
             // For each point in this building
             for (int i = 0; i < currentBuilding.points.Count; i++) {
@@ -339,8 +340,8 @@ public class BuildingCreatorEditor : Editor {
                     hover = Color.blue, dragged = Color.black, idle = Color.white;
                 Vector3 thisPoint = currentBuilding.points[i];
                 Vector3 nextPoint = currentBuilding.points[(i+1) % currentBuilding.points.Count];
-                Vector3 aboveThisPoint = thisPoint + Vector3.up * currentBuilding.height;
-                Vector3 aboveNextPoint = nextPoint + Vector3.up * currentBuilding.height;
+                Vector3 aboveThisPoint = thisPoint + Vector3.up * h;
+                Vector3 aboveNextPoint = nextPoint + Vector3.up * h;
                 bool mouseIsOverThisPoint = (i == SelectionInfo.mouseOverPointIndex && mouseIsOverCurrentBuilding);
                 bool mouseIsOverThisLine = (i == SelectionInfo.mouseOverLineIndex && mouseIsOverCurrentBuilding);
                 bool thisPointIsBeingDragged = (mouseIsOverThisPoint && SelectionInfo.pointIsBeingDragged);
@@ -349,25 +350,27 @@ public class BuildingCreatorEditor : Editor {
                 if (mouseIsOverThisLine) {
                     Handles.color = hover;
                     Handles.DrawLine(thisPoint, nextPoint, 4);
-                    if (BC.showOutlines) Handles.DrawLine(aboveThisPoint, aboveNextPoint, 4);
-                } else {
+                    if (BC.showOutline) Handles.DrawLine(aboveThisPoint, aboveNextPoint, 4);
+                } else if (BC.showOutline) {
                     Handles.color = (currentBuildingIsSelected) ? activeLine : deselected;
                     Handles.DrawDottedLine(thisPoint, nextPoint, 4);
-                    if (BC.showOutlines) Handles.DrawDottedLine(aboveThisPoint, aboveNextPoint, 4);
+                    if (BC.showOutline) Handles.DrawDottedLine(aboveThisPoint, aboveNextPoint, 4);
                 }
 
                 // Discs
-                if (mouseIsOverThisPoint && Event.current.shift) {
-                    Handles.color = (SelectionInfo.pointIsBeingDragged) ? dragged : activeLine;
-                } else if (mouseIsOverThisPoint) {
-                    Handles.color = (SelectionInfo.pointIsBeingDragged) ? dragged : hover;
-                } else {
-                    Handles.color = (currentBuildingIsSelected) ? idle : deselected;    
+                if (BC.showHandles) {
+                    if (mouseIsOverThisPoint && Event.current.shift) {
+                        Handles.color = (SelectionInfo.pointIsBeingDragged) ? dragged : activeLine;
+                    } else if (mouseIsOverThisPoint) {
+                        Handles.color = (SelectionInfo.pointIsBeingDragged) ? dragged : hover;
+                    } else {
+                        Handles.color = (currentBuildingIsSelected) ? idle : deselected;    
+                    }
+                    Handles.DrawSolidDisc(thisPoint, Vector3.up, BC.handleRadius);
                 }
-                Handles.DrawSolidDisc(thisPoint, Vector3.up, BC.handleRadius);
                 
                 // Draw Vertical Lines
-                if (BC.showOutlines){
+                if (BC.showOutline){
                     if (thisPointIsBeingDragged) {
                         Handles.color = dragged;
                     } else if (mouseIsOverThisPoint) {
@@ -379,57 +382,61 @@ public class BuildingCreatorEditor : Editor {
                     }
                     Handles.DrawDottedLine(thisPoint, aboveThisPoint, 4f);
                 }
-                
-                // Guides
-                if (BC.showGuides && currentBuildingIsSelected) {
-                    // Top and Bottom offset guides
-                    Vector3 topHeight = Vector3.up * currentBuilding.height * (1 - currentBuilding.topOffset);
-                    Vector3 bottomHeight = Vector3.up * currentBuilding.height * (currentBuilding.bottomOffset);
-                    Handles.color = Color.green;
-                    Handles.DrawDottedLine(thisPoint + topHeight, nextPoint + topHeight, 8);
-                    Handles.DrawDottedLine(thisPoint + bottomHeight, nextPoint + bottomHeight, 8);
-                    
-                    // Edge offset guides
-                    Vector3 thisToNext = nextPoint - thisPoint;
-                    Vector3 p1 = thisPoint +  thisToNext * currentBuilding.edgeOffset * 0.5f;
-                    Vector3 p2 = nextPoint + -thisToNext * currentBuilding.edgeOffset * 0.5f;
-                    Handles.color = Color.green;
-                    Handles.DrawDottedLine(p1, p1 + Vector3.up * currentBuilding.height, 8);
-                    Handles.DrawDottedLine(p2, p2 + Vector3.up * currentBuilding.height, 8);
-                }
 
                 // Windows
                 if (BC.showWindows 
-                    && currentBuildingIsSelected 
-                    && currentBuilding.edgeOffset != 1 
-                    && currentBuilding.topOffset + currentBuilding.bottomOffset < 0.99) {
+                    && currentBuildingIsSelected
+                    && currentBuilding.windowHeight > 1
+                    && currentBuilding.windowWidth > 1) {
 
-                    // Perpendicular lines
                     Vector3 thisToNext = nextPoint - thisPoint;
                     Vector3 direction = thisToNext.normalized;
                     Vector3 perpendicular = new Vector3(-direction.z, 0, direction.x);
-                    Vector3 middle = thisPoint + thisToNext * 0.5f;
-                    Handles.color = Color.blue;
-                    Handles.DrawLine(middle, middle + perpendicular * 10);
+                    float wallLength = thisToNext.magnitude;
+                    // Available space
+                    float Ax = wallLength * (1 - SelectedBuilding.edgeOffset);
+                    float Ay = h * (1 - (currentBuilding.topOffset + currentBuilding.bottomOffset));
+                    // Window dimensions
+                    float Wx = currentBuilding.windowWidth, Wy = currentBuilding.windowHeight;
+                    // Window Gaps
+                    float Gx = currentBuilding.horizontalGap, Gy = currentBuilding.verticalGap;
+                    // # of windows
+                    int Nx = Mathf.FloorToInt((Ax + Gx) / (Wx + Gx)), Ny = Mathf.FloorToInt((Ay + Gy) / (Wy + Gy));
+                    // Actual used space
+                    float Ux = Nx * (Wx + Gx) - Gx, Uy = Ny * (Wy + Gy) - Gy;
+                    
+                    // Window guides
+                    Vector3 topLeft = thisPoint 
+                                      + direction * ((wallLength - Ux)/2)
+                                      + Vector3.up * (h * (1 - currentBuilding.topOffset) - (Ay - Uy)/2);
 
-                    // Usable Space
-                    Vector3 topHeight = Vector3.up * currentBuilding.height * (1 - currentBuilding.topOffset);
-                    Vector3 bottomHeight = Vector3.up * currentBuilding.height * (currentBuilding.bottomOffset);
-                    float xAvailable = thisToNext.magnitude - thisToNext.magnitude * SelectedBuilding.edgeOffset;
-                    Handles.color = new Color(1, 0, 1);
-                    Vector3 p1 = bottomHeight + thisPoint +  direction * (thisToNext.magnitude - xAvailable) / 2;
-                    Vector3 p2 = bottomHeight + nextPoint + -direction * (thisToNext.magnitude - xAvailable) / 2;
-                    Vector3 p3 = topHeight + thisPoint +  direction * (thisToNext.magnitude - xAvailable) / 2;
-                    Vector3 p4 = topHeight + nextPoint + -direction * (thisToNext.magnitude - xAvailable) / 2;
-                    Handles.DrawLine(p1, p2, 2f);
-                    Handles.DrawLine(p3, p4, 2f);
-                    Handles.DrawLine(p1, p3, 2f);
-                    Handles.DrawLine(p2, p4, 2f);
- 
+                    // Offset guides
+                    // Handles.color = new Color(0f, 0.4f, 0f);
+                    // Vector3 p1 = thisPoint + direction * currentBuilding.edgeOffset * wallLength/2;
+                    // Vector3 p2 = thisPoint + direction * (1 - currentBuilding.edgeOffset/2) * wallLength;
+                    // Handles.DrawLine(p1, p1 + Vector3.up * h, 2);
+                    // Handles.DrawLine(p2, p2 + Vector3.up * h, 2);
+                    // Handles.DrawLine(thisPoint + Vector3.up * currentBuilding.bottomOffset * h, 
+                    //                  nextPoint + Vector3.up * currentBuilding.bottomOffset * h);
+                    // Handles.DrawLine(thisPoint + Vector3.up * (1 - currentBuilding.topOffset) * h, 
+                    //                  nextPoint + Vector3.up * (1 - currentBuilding.topOffset) * h);
+                
+                    if (i == 1 || i == 0) {
+                        Handles.color = Color.magenta;
+                        for (int x = 0; x < Nx; x++) {
+                            for (int y = 0; y < Ny; y++) {
+                                Vector3 position1 = topLeft + direction * (x * (Wx + Gx)) + Vector3.down * (y * (Wy + Gy));
+                                Vector3 position2 = position1 + direction * Wx;
+                                Vector3 position3 = position1 + Vector3.down * Wy;
+                                Vector3 position4 = position2 + Vector3.down * Wy;
+                                Handles.DrawPolyLine(position1, position2, position4, position3, position1);
+                            }
+                        }
+                    }
                 }
-
             }
         }
+
         if (BC.showMesh && meshHasChanged) {
             ClearMesh();
             SetBuildingMeshes();
@@ -505,6 +512,8 @@ public class BuildingCreatorEditor : Editor {
                 vertices.AddRange(verts);
                 triangles.AddRange(tris);
             }
+
+            // Windows
 
             // Apply to mesh
             currentBuilding.mesh.vertices = vertices.ToArray();
