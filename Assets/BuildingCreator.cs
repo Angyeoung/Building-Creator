@@ -49,9 +49,11 @@ public class Building {
     public List<Vector3> points = new List<Vector3>();
     
     // Mesh of the building
-    public Mesh mesh = null;
+    public Mesh buildingMesh = null;
+    public Mesh windowMesh = null;
     // Material of the building
     public Material buildingMaterial;
+    public Material windowMaterial;
     // Windows and doors
     public GameObject window;
     public GameObject door;
@@ -61,8 +63,9 @@ public class Building {
     public float height = 5;
 
     // Window settings
-    public float windowHeight;
-    public float windowWidth;
+    public float windowHeight = 1;
+    public float windowWidth = 1;
+    public float windowDepth = 1;
     // Offsets
     public float topOffset = 0;
     public float bottomOffset = 0;

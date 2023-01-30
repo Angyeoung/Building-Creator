@@ -83,7 +83,8 @@ public class BuildingCreatorEditor : Editor {
             
             // Material
             EditorGUILayout.Space();
-            SelectedBuilding.buildingMaterial = (Material)EditorGUILayout.ObjectField("Material", SelectedBuilding.buildingMaterial, typeof(Material), true);
+            SelectedBuilding.buildingMaterial = (Material)EditorGUILayout.ObjectField("Building Material", SelectedBuilding.buildingMaterial, typeof(Material), true);
+            SelectedBuilding.windowMaterial = (Material)EditorGUILayout.ObjectField("Window Material", SelectedBuilding.windowMaterial, typeof(Material), true);
 
             // Assets
             // EditorGUILayout.Space();
@@ -101,6 +102,7 @@ public class BuildingCreatorEditor : Editor {
             EditorGUILayout.Space();
             SelectedBuilding.windowHeight = EditorGUILayout.FloatField("Window Height", SelectedBuilding.windowHeight);
             SelectedBuilding.windowWidth = EditorGUILayout.FloatField("Window Width", SelectedBuilding.windowWidth);
+            SelectedBuilding.windowDepth = EditorGUILayout.FloatField("Window Depth", SelectedBuilding.windowDepth);
             EditorGUILayout.Space();
             SelectedBuilding.verticalGap = EditorGUILayout.FloatField("Vertical Gap", SelectedBuilding.verticalGap);
             SelectedBuilding.horizontalGap = EditorGUILayout.FloatField("Horizontal Gap", SelectedBuilding.horizontalGap);
@@ -338,8 +340,8 @@ public class BuildingCreatorEditor : Editor {
             for (int i = 0; i < currentBuilding.points.Count; i++) {
                 Color deselected = Color.gray, activeLine = Color.red, 
                     hover = Color.blue, dragged = Color.black, idle = Color.white;
-                Vector3 thisPoint = currentBuilding.points[i];
-                Vector3 nextPoint = currentBuilding.points[(i+1) % currentBuilding.points.Count];
+                Vector3 thisPoint = currentBuilding.points.GetItem(i);
+                Vector3 nextPoint = currentBuilding.points.GetItem(i + 1);
                 Vector3 aboveThisPoint = thisPoint + Vector3.up * h;
                 Vector3 aboveNextPoint = nextPoint + Vector3.up * h;
                 bool mouseIsOverThisPoint = (i == SelectionInfo.mouseOverPointIndex && mouseIsOverCurrentBuilding);
@@ -382,58 +384,17 @@ public class BuildingCreatorEditor : Editor {
                     }
                     Handles.DrawDottedLine(thisPoint, aboveThisPoint, 4f);
                 }
-
-                // Windows
-                if (BC.showWindows 
-                    && currentBuildingIsSelected
-                    && currentBuilding.windowHeight > 1
-                    && currentBuilding.windowWidth > 1) {
-
-                    Vector3 thisToNext = nextPoint - thisPoint;
-                    Vector3 direction = thisToNext.normalized;
-                    Vector3 perpendicular = new Vector3(-direction.z, 0, direction.x);
-                    float wallLength = thisToNext.magnitude;
-                    // Available space
-                    float Ax = wallLength * (1 - SelectedBuilding.edgeOffset);
-                    float Ay = h * (1 - (currentBuilding.topOffset + currentBuilding.bottomOffset));
-                    // Window dimensions
-                    float Wx = currentBuilding.windowWidth, Wy = currentBuilding.windowHeight;
-                    // Window Gaps
-                    float Gx = currentBuilding.horizontalGap, Gy = currentBuilding.verticalGap;
-                    // # of windows
-                    int Nx = Mathf.FloorToInt((Ax + Gx) / (Wx + Gx)), Ny = Mathf.FloorToInt((Ay + Gy) / (Wy + Gy));
-                    // Actual used space
-                    float Ux = Nx * (Wx + Gx) - Gx, Uy = Ny * (Wy + Gy) - Gy;
-                    
-                    // Window guides
-                    Vector3 topLeft = thisPoint 
-                                      + direction * ((wallLength - Ux)/2)
-                                      + Vector3.up * (h * (1 - currentBuilding.topOffset) - (Ay - Uy)/2);
-
-                    // Offset guides
-                    // Handles.color = new Color(0f, 0.4f, 0f);
-                    // Vector3 p1 = thisPoint + direction * currentBuilding.edgeOffset * wallLength/2;
-                    // Vector3 p2 = thisPoint + direction * (1 - currentBuilding.edgeOffset/2) * wallLength;
-                    // Handles.DrawLine(p1, p1 + Vector3.up * h, 2);
-                    // Handles.DrawLine(p2, p2 + Vector3.up * h, 2);
-                    // Handles.DrawLine(thisPoint + Vector3.up * currentBuilding.bottomOffset * h, 
-                    //                  nextPoint + Vector3.up * currentBuilding.bottomOffset * h);
-                    // Handles.DrawLine(thisPoint + Vector3.up * (1 - currentBuilding.topOffset) * h, 
-                    //                  nextPoint + Vector3.up * (1 - currentBuilding.topOffset) * h);
-                
-                    if (i == 1 || i == 0) {
-                        Handles.color = Color.magenta;
-                        for (int x = 0; x < Nx; x++) {
-                            for (int y = 0; y < Ny; y++) {
-                                Vector3 position1 = topLeft + direction * (x * (Wx + Gx)) + Vector3.down * (y * (Wy + Gy));
-                                Vector3 position2 = position1 + direction * Wx;
-                                Vector3 position3 = position1 + Vector3.down * Wy;
-                                Vector3 position4 = position2 + Vector3.down * Wy;
-                                Handles.DrawPolyLine(position1, position2, position4, position3, position1);
-                            }
-                        }
-                    }
-                }
+                // Offset guides
+                // Handles.color = new Color(0f, 0.4f, 0f);
+                // Vector3 p1 = thisPoint + direction * currentBuilding.edgeOffset * wallLength/2;
+                // Vector3 p2 = thisPoint + direction * (1 - currentBuilding.edgeOffset/2) * wallLength;
+                // Handles.DrawLine(p1, p1 + Vector3.up * h, 2);
+                // Handles.DrawLine(p2, p2 + Vector3.up * h, 2);
+                // Handles.DrawLine(thisPoint + Vector3.up * currentBuilding.bottomOffset * h, 
+                //                  nextPoint + Vector3.up * currentBuilding.bottomOffset * h);
+                // Handles.DrawLine(thisPoint + Vector3.up * (1 - currentBuilding.topOffset) * h, 
+                //                  nextPoint + Vector3.up * (1 - currentBuilding.topOffset) * h);
+            
             }
         }
 
@@ -453,18 +414,20 @@ public class BuildingCreatorEditor : Editor {
         for (int currentBuildingIndex = 0; currentBuildingIndex < BC.buildings.Count; currentBuildingIndex++) {
             // Current building of this iteration of the loop
             Building currentBuilding = BC.buildings[currentBuildingIndex];
+            bool currentBuildingIsSelected = (currentBuildingIndex == SelectionInfo.buildingIndex);
             // Bool to signify the winding order of the buildings points
             bool isClockWise = currentBuilding.points.ToXZ().FindArea2D() > 0;
-            // List of vertices of the building
+            // List of triangles and vertices of the building and windows
             List<Vector3> vertices = new List<Vector3>();
-            // List of triangles of the building
             List<int> triangles = new List<int>();
+            List<Vector3> verticesW = new List<Vector3>();
+            List<int> trianglesW = new List<int>();
             // Height of the building
             Vector3 h = currentBuilding.height * Vector3.up;
             
             // Clear mesh
-            currentBuilding.mesh = new Mesh();
-            currentBuilding.mesh.Clear();
+            currentBuilding.buildingMesh = new Mesh();
+            currentBuilding.windowMesh = new Mesh();
             
             // Wall triangles
             for (int currentPointIndex = 0, totalVerts = 0; currentPointIndex < currentBuilding.points.Count; currentPointIndex++) {
@@ -514,19 +477,82 @@ public class BuildingCreatorEditor : Editor {
             }
 
             // Windows
+            if (BC.showWindows 
+                && currentBuildingIsSelected
+                && currentBuilding.windowHeight > 1
+                && currentBuilding.windowWidth > 1) {
+                
+                for (int currentPointIndex = 0; currentPointIndex < currentBuilding.points.Count; currentPointIndex++) {
+                    Vector3 thisPoint = currentBuilding.points.GetItem(currentPointIndex);
+                    Vector3 nextPoint = currentBuilding.points.GetItem(currentPointIndex + 1);
+                    Vector3 thisToNext = nextPoint - thisPoint;
+                    Vector3 direction = thisToNext.normalized;
+                    Vector3 perpendicular = new Vector3(-direction.z, 0, direction.x);
+                    float wallLength = thisToNext.magnitude;
+                    // Available space
+                    float Ax = wallLength * (1 - SelectedBuilding.edgeOffset);
+                    float Ay = h.magnitude * (1 - (currentBuilding.topOffset + currentBuilding.bottomOffset));
+                    // Window dimensions
+                    float Wx = currentBuilding.windowWidth, Wy = currentBuilding.windowHeight;
+                    // Window Gaps
+                    float Gx = currentBuilding.horizontalGap, Gy = currentBuilding.verticalGap;
+                    // # of windows
+                    int Nx = Mathf.FloorToInt((Ax + Gx) / (Wx + Gx)), Ny = Mathf.FloorToInt((Ay + Gy) / (Wy + Gy));
+                    // Actual used space
+                    float Ux = Nx * (Wx + Gx) - Gx, Uy = Ny * (Wy + Gy) - Gy;
+                    
+                    // Starting point
+                    Vector3 topLeft = thisPoint 
+                                        + direction * ((wallLength - Ux)/2)
+                                        + Vector3.up * (h.magnitude * (1 - currentBuilding.topOffset) - (Ay - Uy)/2);
+
+                    for (int x = 0; x < Nx; x++) {
+                        for (int y = 0; y < Ny; y++) {
+                            Vector3 d = perpendicular * currentBuilding.windowDepth;
+                            Vector3 p0 = topLeft + direction * (x * (Wx + Gx)) + Vector3.down * (y * (Wy + Gy));
+                            Vector3 p1 = p0 + direction * Wx;
+                            Vector3 p2 = p0 + Vector3.down * Wy;
+                            Vector3 p3 = p1 + Vector3.down * Wy;
+                            Vector3 p4 = p0 + d, p5 = p1 + d, p6 = p2 + d, p7 = p3 + d; 
+
+                            List<Vector3> verts = new List<Vector3>{
+                                p0, p4, p2, p6,
+                                p1, p5, p0, p4,
+                                p3, p7, p1, p5,
+                                p2, p6, p3, p7,
+                                p4, p5, p6, p7
+                            };
+                            List<int> tris = new List<int>{
+                                0,   1,  2,  2,  1,  3,
+                                4,   5,  6,  6,  5,  7,
+                                8,   9, 10, 10,  9, 11,
+                                12, 13, 14, 14, 13, 15,
+                                16, 17, 18, 18, 17, 19
+                            };
+                            trianglesW.AddRange(tris.Map(a => a + verticesW.Count));
+                            verticesW.AddRange(verts);
+                        }
+                    }
+
+                }
+            }
 
             // Apply to mesh
-            currentBuilding.mesh.vertices = vertices.ToArray();
-            currentBuilding.mesh.triangles = triangles.ToArray();
+            currentBuilding.buildingMesh.vertices = vertices.ToArray();
+            currentBuilding.buildingMesh.triangles = triangles.ToArray();
+            currentBuilding.windowMesh.vertices = verticesW.ToArray();
+            currentBuilding.windowMesh.triangles = trianglesW.ToArray();
         }
+
     }
 
     // Update shared mesh
     void UpdateComponents() {
         BC.meshFilter.sharedMesh.Clear();
-        CombineInstance[] meshes = new CombineInstance[BC.buildings.Count];
-        for (int i = 0; i < BC.buildings.Count; i++) {
-            meshes[i].mesh = BC.buildings[i].mesh;
+        CombineInstance[] meshes = new CombineInstance[BC.buildings.Count * 2];
+        for (int i = 0; i < BC.buildings.Count; i+=2) {
+            meshes[i].mesh = BC.buildings[i].buildingMesh;
+            meshes[i + 1].mesh = BC.buildings[i].windowMesh;
         }
         BC.meshFilter.sharedMesh.CombineMeshes(meshes, false, false, false);
         BC.meshFilter.sharedMesh.RecalculateNormals();
@@ -536,6 +562,7 @@ public class BuildingCreatorEditor : Editor {
         materials.Clear();
         for (int i = 0; i < BC.buildings.Count; i++) {
             materials.Add(BC.buildings[i].buildingMaterial);
+            materials.Add(BC.buildings[i].windowMaterial);
         }
         BC.meshRenderer.sharedMaterials = materials.ToArray();
     }
