@@ -428,6 +428,8 @@ public class BuildingCreatorEditor : Editor {
             // Clear mesh
             currentBuilding.buildingMesh = new Mesh();
             currentBuilding.windowMesh = new Mesh();
+            currentBuilding.buildingMesh.Clear();
+            currentBuilding.windowMesh.Clear();
             
             // Wall triangles
             for (int currentPointIndex = 0, totalVerts = 0; currentPointIndex < currentBuilding.points.Count; currentPointIndex++) {
@@ -477,8 +479,7 @@ public class BuildingCreatorEditor : Editor {
             }
 
             // Windows
-            if (BC.showWindows 
-                && currentBuildingIsSelected
+            if (BC.showWindows
                 && currentBuilding.windowHeight > 1
                 && currentBuilding.windowWidth > 1) {
                 
@@ -490,7 +491,7 @@ public class BuildingCreatorEditor : Editor {
                     Vector3 perpendicular = new Vector3(-direction.z, 0, direction.x);
                     float wallLength = thisToNext.magnitude;
                     // Available space
-                    float Ax = wallLength * (1 - SelectedBuilding.edgeOffset);
+                    float Ax = wallLength * (1 - currentBuilding.edgeOffset);
                     float Ay = h.magnitude * (1 - (currentBuilding.topOffset + currentBuilding.bottomOffset));
                     // Window dimensions
                     float Wx = currentBuilding.windowWidth, Wy = currentBuilding.windowHeight;
@@ -535,13 +536,13 @@ public class BuildingCreatorEditor : Editor {
                     }
 
                 }
+                currentBuilding.windowMesh.vertices = verticesW.ToArray();
+                currentBuilding.windowMesh.triangles = trianglesW.ToArray();
             }
 
             // Apply to mesh
             currentBuilding.buildingMesh.vertices = vertices.ToArray();
             currentBuilding.buildingMesh.triangles = triangles.ToArray();
-            currentBuilding.windowMesh.vertices = verticesW.ToArray();
-            currentBuilding.windowMesh.triangles = trianglesW.ToArray();
         }
 
     }
@@ -549,12 +550,22 @@ public class BuildingCreatorEditor : Editor {
     // Update shared mesh
     void UpdateComponents() {
         BC.meshFilter.sharedMesh.Clear();
-        CombineInstance[] meshes = new CombineInstance[BC.buildings.Count * 2];
-        for (int i = 0; i < BC.buildings.Count; i+=2) {
-            meshes[i].mesh = BC.buildings[i].buildingMesh;
-            meshes[i + 1].mesh = BC.buildings[i].windowMesh;
+        List<CombineInstance> meshes = new List<CombineInstance>();
+
+        for (int i = 0; i < BC.buildings.Count; i++) {
+            CombineInstance buildingMesh = new CombineInstance();
+            CombineInstance windowMesh = new CombineInstance();
+            if (BC.buildings[i].buildingMesh) {
+                buildingMesh.mesh = BC.buildings[i].buildingMesh;
+                meshes.Add(buildingMesh);
+            }
+            if (BC.buildings[i].windowMesh) {
+                windowMesh.mesh = BC.buildings[i].windowMesh;
+                meshes.Add(windowMesh);
+            }
         }
-        BC.meshFilter.sharedMesh.CombineMeshes(meshes, false, false, false);
+
+        BC.meshFilter.sharedMesh.CombineMeshes(meshes.ToArray(), false, false, false);
         BC.meshFilter.sharedMesh.RecalculateNormals();
 
         // Materials

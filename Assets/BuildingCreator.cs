@@ -52,8 +52,8 @@ public class Building {
     public Mesh buildingMesh = null;
     public Mesh windowMesh = null;
     // Material of the building
-    public Material buildingMaterial;
-    public Material windowMaterial;
+    public Material buildingMaterial = null;
+    public Material windowMaterial = null;
     // Windows and doors
     public GameObject window;
     public GameObject door;
