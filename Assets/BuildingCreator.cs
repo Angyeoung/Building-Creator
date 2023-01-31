@@ -36,6 +36,7 @@ public class BuildingCreator : MonoBehaviour {
 
     // Dropdowns
     public bool showSelectionInfo = false; 
+    public bool showGuides = false;
     public bool showBuildingsList = false;
     public bool showSelectedBuildingInfo = false;
     public bool showWindowSettings = false;

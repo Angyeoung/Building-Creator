@@ -43,8 +43,9 @@ public class BuildingCreatorEditor : Editor {
         // Settings
         EditorGUILayout.Space(15f);
         BC.showHandles = EditorGUILayout.ToggleLeft(TT("Show Handles", "Hides/Displays shape handles"), BC.showHandles);
-        if (BC.showHandles) BC.handleRadius = EditorGUILayout.Slider("Handle Size", BC.handleRadius, 0f, 10f);
+        if (BC.showHandles) BC.handleRadius = EditorGUILayout.Slider("", BC.handleRadius, 0f, 20f);
         BC.showOutline = EditorGUILayout.ToggleLeft(TT("Show Outline", "Hides/Displays building outline"), BC.showOutline);
+        BC.showGuides = EditorGUILayout.ToggleLeft("Show Guides", BC.showGuides);
         BC.showWindows = EditorGUILayout.ToggleLeft(TT("Show Windows", "Hides/Displays window outlines"), BC.showWindows);
         BC.showMesh = EditorGUILayout.ToggleLeft(TT("Show Mesh", "Hides/Displays building meshes"), BC.showMesh);
 
@@ -385,16 +386,21 @@ public class BuildingCreatorEditor : Editor {
                     }
                     Handles.DrawDottedLine(thisPoint, aboveThisPoint, 4f);
                 }
+
                 // Offset guides
-                // Handles.color = new Color(0f, 0.4f, 0f);
-                // Vector3 p1 = thisPoint + direction * currentBuilding.edgeOffset * wallLength/2;
-                // Vector3 p2 = thisPoint + direction * (1 - currentBuilding.edgeOffset/2) * wallLength;
-                // Handles.DrawLine(p1, p1 + Vector3.up * h, 2);
-                // Handles.DrawLine(p2, p2 + Vector3.up * h, 2);
-                // Handles.DrawLine(thisPoint + Vector3.up * currentBuilding.bottomOffset * h, 
-                //                  nextPoint + Vector3.up * currentBuilding.bottomOffset * h);
-                // Handles.DrawLine(thisPoint + Vector3.up * (1 - currentBuilding.topOffset) * h, 
-                //                  nextPoint + Vector3.up * (1 - currentBuilding.topOffset) * h);
+                if (BC.showGuides) {
+                    Handles.color = new Color(0f, 0.4f, 0f);
+                    Vector3 direction = (nextPoint - thisPoint).normalized;
+                    float wallLength = (nextPoint - thisPoint).magnitude;
+                    Vector3 p1 = thisPoint + direction * currentBuilding.edgeOffset * wallLength/2;
+                    Vector3 p2 = thisPoint + direction * (1 - currentBuilding.edgeOffset/2) * wallLength;
+                    Handles.DrawLine(p1, p1 + Vector3.up * h, 2);
+                    Handles.DrawLine(p2, p2 + Vector3.up * h, 2);
+                    Handles.DrawLine(thisPoint + Vector3.up * currentBuilding.bottomOffset * h, 
+                                    nextPoint + Vector3.up * currentBuilding.bottomOffset * h);
+                    Handles.DrawLine(thisPoint + Vector3.up * (1 - currentBuilding.topOffset) * h, 
+                                    nextPoint + Vector3.up * (1 - currentBuilding.topOffset) * h);
+                }
             
             }
         }
