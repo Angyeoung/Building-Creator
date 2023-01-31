@@ -86,26 +86,27 @@ public class BuildingCreatorEditor : Editor {
             SelectedBuilding.buildingMaterial = (Material)EditorGUILayout.ObjectField("Building Material", SelectedBuilding.buildingMaterial, typeof(Material), true);
             SelectedBuilding.windowMaterial = (Material)EditorGUILayout.ObjectField("Window Material", SelectedBuilding.windowMaterial, typeof(Material), true);
 
-            // Assets
-            // EditorGUILayout.Space();
-            // SelectedBuilding.door = (GameObject)EditorGUILayout.ObjectField("Door", SelectedBuilding.door, typeof(GameObject), true);
-            // SelectedBuilding.window = (GameObject)EditorGUILayout.ObjectField("Window", SelectedBuilding.window, typeof(GameObject), true);
-
-            // Options 
+            // General Settings 
             EditorGUILayout.Space();
             SelectedBuilding.inverted = EditorGUILayout.ToggleLeft(TT("Inverted", "Inverts building faces"), SelectedBuilding.inverted);
             SelectedBuilding.height = EditorGUILayout.FloatField("Building Height", SelectedBuilding.height);
             EditorGUILayout.Space();
-            SelectedBuilding.topOffset = EditorGUILayout.Slider("Top Offset", SelectedBuilding.topOffset, 0f, 1 - SelectedBuilding.bottomOffset);
-            SelectedBuilding.bottomOffset = EditorGUILayout.Slider("Bottom Offset", SelectedBuilding.bottomOffset, 0f, 1 - SelectedBuilding.topOffset);
-            SelectedBuilding.edgeOffset = EditorGUILayout.Slider("Edge Offset", SelectedBuilding.edgeOffset, 0f, 1f);
-            EditorGUILayout.Space();
-            SelectedBuilding.windowHeight = EditorGUILayout.FloatField("Window Height", SelectedBuilding.windowHeight);
-            SelectedBuilding.windowWidth = EditorGUILayout.FloatField("Window Width", SelectedBuilding.windowWidth);
-            SelectedBuilding.windowDepth = EditorGUILayout.FloatField("Window Depth", SelectedBuilding.windowDepth);
-            EditorGUILayout.Space();
-            SelectedBuilding.verticalGap = EditorGUILayout.FloatField("Vertical Gap", SelectedBuilding.verticalGap);
-            SelectedBuilding.horizontalGap = EditorGUILayout.FloatField("Horizontal Gap", SelectedBuilding.horizontalGap);
+
+            // Window Settings Foldout
+            BC.showWindowSettings = EditorGUILayout.Foldout(BC.showWindowSettings, "Window Settings");
+            if (BC.showWindowSettings) {
+                SelectedBuilding.topOffset = EditorGUILayout.Slider("Top Offset", SelectedBuilding.topOffset, 0f, 1 - SelectedBuilding.bottomOffset);
+                SelectedBuilding.bottomOffset = EditorGUILayout.Slider("Bottom Offset", SelectedBuilding.bottomOffset, 0f, 1 - SelectedBuilding.topOffset);
+                SelectedBuilding.edgeOffset = EditorGUILayout.Slider("Edge Offset", SelectedBuilding.edgeOffset, 0f, 1f);
+                EditorGUILayout.Space();
+                SelectedBuilding.windowHeight = EditorGUILayout.FloatField("Window Height", SelectedBuilding.windowHeight);
+                SelectedBuilding.windowWidth = EditorGUILayout.FloatField("Window Width", SelectedBuilding.windowWidth);
+                SelectedBuilding.windowDepth = EditorGUILayout.FloatField("Window Depth", SelectedBuilding.windowDepth);
+                EditorGUILayout.Space();
+                SelectedBuilding.verticalGap = EditorGUILayout.FloatField("Vertical Gap", SelectedBuilding.verticalGap);
+                SelectedBuilding.horizontalGap = EditorGUILayout.FloatField("Horizontal Gap", SelectedBuilding.horizontalGap);
+            }
+
         }
 
         // Delete buildings if needed (While maintaining proper selection)
@@ -327,7 +328,7 @@ public class BuildingCreatorEditor : Editor {
 
     }
 
-    // Draws handles
+    // Draws handles and meshes
     void Draw() {
         // For each building
         for (int buildingIndex = 0; buildingIndex < BC.buildings.Count; buildingIndex++) {    
@@ -398,12 +399,13 @@ public class BuildingCreatorEditor : Editor {
             }
         }
 
-        if (BC.showMesh && meshHasChanged) {
+        if ((BC.showMesh || BC.showWindows) && meshHasChanged) {
             ClearMesh();
             SetBuildingMeshes();
             UpdateComponents();
         } else if (!BC.showMesh) {
             ClearMesh();
+            UpdateComponents();
         }
         meshHasChanged = false;
         buildingHasChanged = false;
@@ -412,24 +414,22 @@ public class BuildingCreatorEditor : Editor {
     // Create mesh of all buildings
     void SetBuildingMeshes() {
         for (int currentBuildingIndex = 0; currentBuildingIndex < BC.buildings.Count; currentBuildingIndex++) {
-            // Current building of this iteration of the loop
+            // Current building in this context
             Building currentBuilding = BC.buildings[currentBuildingIndex];
             bool currentBuildingIsSelected = (currentBuildingIndex == SelectionInfo.buildingIndex);
-            // Bool to signify the winding order of the buildings points
+            // Boolean to signify the winding order of the buildings points
             bool isClockWise = currentBuilding.points.ToXZ().FindArea2D() > 0;
             // List of triangles and vertices of the building and windows
             List<Vector3> vertices = new List<Vector3>();
             List<int> triangles = new List<int>();
-            List<Vector3> verticesW = new List<Vector3>();
-            List<int> trianglesW = new List<int>();
             // Height of the building
             Vector3 h = currentBuilding.height * Vector3.up;
             
             // Clear mesh
             currentBuilding.buildingMesh = new Mesh();
             currentBuilding.windowMesh = new Mesh();
-            currentBuilding.buildingMesh.Clear();
-            currentBuilding.windowMesh.Clear();
+            // currentBuilding.buildingMesh.Clear();
+            // currentBuilding.windowMesh.Clear();
             
             // Wall triangles
             for (int currentPointIndex = 0, totalVerts = 0; currentPointIndex < currentBuilding.points.Count; currentPointIndex++) {
@@ -478,11 +478,14 @@ public class BuildingCreatorEditor : Editor {
                 triangles.AddRange(tris);
             }
 
+            // Apply to mesh
+            currentBuilding.buildingMesh.vertices = vertices.ToArray();
+            currentBuilding.buildingMesh.triangles = triangles.ToArray();
+
             // Windows
-            if (BC.showWindows
-                && currentBuilding.windowHeight > 1
-                && currentBuilding.windowWidth > 1) {
-                
+            if (BC.showWindows && currentBuilding.windowHeight >= 5 && currentBuilding.windowWidth >= 5) {
+                List<Vector3> verticesW = new List<Vector3>();
+                List<int> trianglesW = new List<int>();
                 for (int currentPointIndex = 0; currentPointIndex < currentBuilding.points.Count; currentPointIndex++) {
                     Vector3 thisPoint = currentBuilding.points.GetItem(currentPointIndex);
                     Vector3 nextPoint = currentBuilding.points.GetItem(currentPointIndex + 1);
@@ -543,13 +546,8 @@ public class BuildingCreatorEditor : Editor {
                 }
                 currentBuilding.windowMesh.vertices = verticesW.ToArray();
                 currentBuilding.windowMesh.triangles = trianglesW.ToArray();
-            }
-
-            // Apply to mesh
-            currentBuilding.buildingMesh.vertices = vertices.ToArray();
-            currentBuilding.buildingMesh.triangles = triangles.ToArray();
+            }       
         }
-
     }
 
     // Update shared mesh
@@ -559,12 +557,14 @@ public class BuildingCreatorEditor : Editor {
 
         for (int i = 0; i < BC.buildings.Count; i++) {
             CombineInstance buildingMesh = new CombineInstance();
-            CombineInstance windowMesh = new CombineInstance();
-            if (BC.buildings[i].buildingMesh) {
+            if (BC.buildings[i].buildingMesh && BC.showMesh) {
                 buildingMesh.mesh = BC.buildings[i].buildingMesh;
                 meshes.Add(buildingMesh);
             }
-            if (BC.buildings[i].windowMesh) {
+        }
+        for (int i = 0; i < BC.buildings.Count; i++) {
+            CombineInstance windowMesh = new CombineInstance();
+            if (BC.buildings[i].windowMesh && BC.showWindows) {
                 windowMesh.mesh = BC.buildings[i].windowMesh;
                 meshes.Add(windowMesh);
             }
@@ -576,9 +576,15 @@ public class BuildingCreatorEditor : Editor {
         // Materials
         List<Material> materials = new List<Material>();
         materials.Clear();
-        for (int i = 0; i < BC.buildings.Count; i++) {
-            materials.Add(BC.buildings[i].buildingMaterial);
-            materials.Add(BC.buildings[i].windowMaterial);
+        if (BC.showMesh) {
+            for (int i = 0; i < BC.buildings.Count; i++) {
+                materials.Add(BC.buildings[i].buildingMaterial);
+            }
+        }
+        if (BC.showWindows) {
+            for (int i = 0; i < BC.buildings.Count; i++) {
+                materials.Add(BC.buildings[i].windowMaterial);
+            }
         }
         BC.meshRenderer.sharedMaterials = materials.ToArray();
     }

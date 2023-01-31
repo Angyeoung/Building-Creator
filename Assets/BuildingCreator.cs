@@ -38,6 +38,7 @@ public class BuildingCreator : MonoBehaviour {
     public bool showSelectionInfo = false; 
     public bool showBuildingsList = false;
     public bool showSelectedBuildingInfo = false;
+    public bool showWindowSettings = false;
 
 }
 
@@ -63,8 +64,8 @@ public class Building {
     public float height = 5;
 
     // Window settings
-    public float windowHeight = 1;
-    public float windowWidth = 1;
+    public float windowHeight = 5;
+    public float windowWidth = 5;
     public float windowDepth = 1;
     // Offsets
     public float topOffset = 0;
