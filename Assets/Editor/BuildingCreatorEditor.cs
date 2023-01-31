@@ -488,7 +488,9 @@ public class BuildingCreatorEditor : Editor {
                     Vector3 nextPoint = currentBuilding.points.GetItem(currentPointIndex + 1);
                     Vector3 thisToNext = nextPoint - thisPoint;
                     Vector3 direction = thisToNext.normalized;
-                    Vector3 perpendicular = new Vector3(-direction.z, 0, direction.x);
+                    Vector3 perpendicular = isClockWise == currentBuilding.inverted ? 
+                                            new Vector3(direction.z, 0, -direction.x):
+                                            new Vector3(-direction.z, 0, direction.x);
                     float wallLength = thisToNext.magnitude;
                     // Available space
                     float Ax = wallLength * (1 - currentBuilding.edgeOffset);
@@ -530,6 +532,9 @@ public class BuildingCreatorEditor : Editor {
                                 12, 13, 14, 14, 13, 15,
                                 16, 17, 18, 18, 17, 19
                             };
+                            if (isClockWise != currentBuilding.inverted) {
+                                tris.Reverse();
+                            }
                             trianglesW.AddRange(tris.Map(a => a + verticesW.Count));
                             verticesW.AddRange(verts);
                         }
