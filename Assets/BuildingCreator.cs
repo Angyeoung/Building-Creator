@@ -10,6 +10,8 @@ public class BuildingCreator : MonoBehaviour {
 
     public MeshFilter meshFilter;
     public MeshRenderer meshRenderer;
+    // List of buildings
+    public List<Building> buildings = new List<Building>();
 
     // Singleton functionality
     // https://gamedevbeginner.com/singletons-in-unity-the-right-way/
@@ -23,33 +25,14 @@ public class BuildingCreator : MonoBehaviour {
             this.gameObject.transform.position = Vector3.zero;
         }
     }
-
-    // List of buildings
-    public List<Building> buildings = new List<Building>();
-
-    // Settings
-    public float handleRadius = 0.5f;
-    public bool showHandles = true;
-    public bool showOutline = true;
-    public bool showMesh = false;
-    public bool showWindows = false;
-
-    // Dropdowns
-    public bool showSelectionInfo = false; 
-    public bool showGuides = false;
-    public bool showBuildingsList = false;
-    public bool showSelectedBuildingInfo = false;
-    public bool showWindowSettings = false;
-
 }
 
 // Class for individual building
 [System.Serializable]
 public class Building {
-
+    public string name = "Untitled";
     // List of points for the buildin
     public List<Vector3> points = new List<Vector3>();
-    
     // Mesh of the building
     public Mesh buildingMesh = null;
     public Mesh windowMesh = null;
@@ -59,41 +42,48 @@ public class Building {
     // Windows and doors
     public GameObject window;
     public GameObject door;
-
     // Building Settings
     public bool inverted = false;
-    public float height = 5;
-
+    public float height = 10;
+    // Visibility
+    public bool showBuildingMesh = false;
+    public bool showWindowMesh = false;
     // Window settings
     public float windowHeight = 5;
     public float windowWidth = 5;
     public float windowDepth = 1;
     // Offsets
-    public float topOffset = 0;
-    public float bottomOffset = 0;
-    public float edgeOffset = 0;
+    public float topOffset = 0.2f;
+    public float bottomOffset = 0.2f;
+    public float edgeOffset = 0.1f;
     // Gaps
     public float horizontalGap = 1;
     public float verticalGap = 1;
-
 }
 
 // This class stores selection information
-
 public static class SelectionInfo {
-
     // Drag
     public static bool pointIsBeingDragged = false;
     public static Vector3 positionAtDragStart;
-
     // Selection
     public static int buildingIndex;
-
     // Mouse Over
     public static int mouseOverBuildingIndex = -1;
     public static int mouseOverPointIndex = -1;
     public static int mouseOverLineIndex = -1;
     public static bool mouseIsOverPoint = false;
     public static bool mouseIsOverLine = false;
+}
 
+public static class BCMenu {
+    public static bool showDebugInfo = false; 
+    public static bool showViewSettings = false;
+    public static bool showOutline = true;
+    public static bool showGuides = false;
+    public static bool showHandles = true;
+    public static float handleRadius = 1f;
+    public static bool showBuildingsList = false;
+    public static bool showSelectedBuildingInfo = false;
+    public static bool showWindowSettings = false;
 }

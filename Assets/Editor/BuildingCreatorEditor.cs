@@ -12,6 +12,7 @@ public class BuildingCreatorEditor : Editor {
     // Used to repaint views / remake meshes
     bool buildingHasChanged = true;
     bool meshHasChanged = true;
+    Vector2 scrollPos;
 
     // Custom inspector
     public override void OnInspectorGUI() {
@@ -22,8 +23,8 @@ public class BuildingCreatorEditor : Editor {
         EditorGUI.ProgressBar(rect, 1, "Building Creator");
 
         // Debug info foldout
-        BC.showSelectionInfo = EditorGUILayout.Foldout(BC.showSelectionInfo, "Debug Info");
-        if (BC.showSelectionInfo) {
+        BCMenu.showDebugInfo = EditorGUILayout.Foldout(BCMenu.showDebugInfo, "Debug Info");
+        if (BCMenu.showDebugInfo) {
             EditorGUILayout.Space(5f);
             EditorGUILayout.ToggleLeft("Mouse over line?", SelectionInfo.mouseIsOverLine);
             EditorGUILayout.ToggleLeft("Mouse over point?", SelectionInfo.mouseIsOverPoint);
@@ -42,60 +43,79 @@ public class BuildingCreatorEditor : Editor {
 
         // Settings
         EditorGUILayout.Space(15f);
-        BC.showHandles = EditorGUILayout.ToggleLeft(TT("Show Handles", "Hides/Displays shape handles"), BC.showHandles);
-        if (BC.showHandles) BC.handleRadius = EditorGUILayout.Slider("", BC.handleRadius, 0f, 20f);
-        BC.showOutline = EditorGUILayout.ToggleLeft(TT("Show Outline", "Hides/Displays building outline"), BC.showOutline);
-        BC.showGuides = EditorGUILayout.ToggleLeft("Show Guides", BC.showGuides);
-        BC.showWindows = EditorGUILayout.ToggleLeft(TT("Show Windows", "Hides/Displays window outlines"), BC.showWindows);
-        BC.showMesh = EditorGUILayout.ToggleLeft(TT("Show Mesh", "Hides/Displays building meshes"), BC.showMesh);
+        BCMenu.showViewSettings = EditorGUILayout.Foldout(BCMenu.showViewSettings, "View Settings");
+        if (BCMenu.showViewSettings) {
+            BCMenu.showOutline = EditorGUILayout.ToggleLeft("Show Outline", BCMenu.showOutline);
+            BCMenu.showGuides = EditorGUILayout.ToggleLeft("Show Guides", BCMenu.showGuides);
+            BCMenu.showHandles = EditorGUILayout.ToggleLeft("Show Handles", BCMenu.showHandles);
+            if (BCMenu.showHandles) BCMenu.handleRadius = EditorGUILayout.Slider("", BCMenu.handleRadius, 0f, 20f);
+        }
 
         // Buildings list foldout
         EditorGUILayout.Space(15f);
-        BC.showBuildingsList = EditorGUILayout.Foldout(BC.showBuildingsList, "Buildings List");
+        BCMenu.showBuildingsList = EditorGUILayout.Foldout(BCMenu.showBuildingsList, "Buildings List");
         int buildingDeleteIndex = -1;
-        if (BC.showBuildingsList) {
+        if (BCMenu.showBuildingsList) {
+            // Scroll view
+            scrollPos = EditorGUILayout.BeginScrollView(scrollPos, GUILayout.Height(106));  
             for (int i = 0; i < BC.buildings.Count; i++)
             {
                 GUILayout.BeginHorizontal();
-                GUILayout.Label("Building " + (i + 1));
+                BC.buildings[i].name = GUILayout.TextField(BC.buildings[i].name, GUILayout.Width(150));
+                // Disable the next button if it represents the selected building
                 GUI.enabled = (i != SelectionInfo.buildingIndex);
                 if (GUILayout.Button("Select")) {
                     Undo.RecordObject(BC, "Select Building");
                     SelectionInfo.buildingIndex = i;
                 }
+                // Re-enaable the GUI
                 GUI.enabled = true;
                 if (GUILayout.Button("Delete")) {
                     buildingDeleteIndex = i;
                 }
                 GUILayout.EndHorizontal();
             }
+            EditorGUILayout.EndScrollView();
+            
+            // Deselect button
+            if (GUILayout.Button("Deselect")) SelectionInfo.buildingIndex = -1;
             GUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(" ");
-            if (GUILayout.Button("Deselect")) {
-                SelectionInfo.buildingIndex = -1;
+            if (GUILayout.Button("Disable All Meshes")) {
+                for (int i = 0; i < BC.buildings.Count; i++) {
+                    BC.buildings[i].showBuildingMesh = false;
+                    BC.buildings[i].showWindowMesh = false;
+                }
+            }
+            if (GUILayout.Button("Enable All Meshes")) {
+                for (int i = 0; i < BC.buildings.Count; i++) {
+                    BC.buildings[i].showBuildingMesh = true;
+                    BC.buildings[i].showWindowMesh = true;
+                }
             }
             GUILayout.EndHorizontal();
         }
 
         // Selected building info foldout
         EditorGUILayout.Space(15f);
-        BC.showSelectedBuildingInfo = EditorGUILayout.Foldout(BC.showSelectedBuildingInfo, "Selected Building Info");
-        if (BC.showSelectedBuildingInfo && SelectionInfo.buildingIndex != -1) {
+        BCMenu.showSelectedBuildingInfo = EditorGUILayout.Foldout(BCMenu.showSelectedBuildingInfo, "Selected Building Info");
+        if (BCMenu.showSelectedBuildingInfo && SelectionInfo.buildingIndex != -1) {
+            
+            // General Settings 
+            EditorGUILayout.Space();
+            SelectedBuilding.inverted = EditorGUILayout.ToggleLeft("Inverted", SelectedBuilding.inverted);
+            SelectedBuilding.showBuildingMesh = EditorGUILayout.ToggleLeft("Show Building Mesh", SelectedBuilding.showBuildingMesh);
+            SelectedBuilding.showWindowMesh = EditorGUILayout.ToggleLeft("Show Window Mesh", SelectedBuilding.showWindowMesh);
+            SelectedBuilding.height = EditorGUILayout.FloatField("Building Height", SelectedBuilding.height);
+            EditorGUILayout.Space();
             
             // Material
             EditorGUILayout.Space();
             SelectedBuilding.buildingMaterial = (Material)EditorGUILayout.ObjectField("Building Material", SelectedBuilding.buildingMaterial, typeof(Material), true);
             SelectedBuilding.windowMaterial = (Material)EditorGUILayout.ObjectField("Window Material", SelectedBuilding.windowMaterial, typeof(Material), true);
 
-            // General Settings 
-            EditorGUILayout.Space();
-            SelectedBuilding.inverted = EditorGUILayout.ToggleLeft(TT("Inverted", "Inverts building faces"), SelectedBuilding.inverted);
-            SelectedBuilding.height = EditorGUILayout.FloatField("Building Height", SelectedBuilding.height);
-            EditorGUILayout.Space();
-
             // Window Settings Foldout
-            BC.showWindowSettings = EditorGUILayout.Foldout(BC.showWindowSettings, "Window Settings");
-            if (BC.showWindowSettings) {
+            BCMenu.showWindowSettings = EditorGUILayout.Foldout(BCMenu.showWindowSettings, "Window Settings");
+            if (BCMenu.showWindowSettings) {
                 SelectedBuilding.topOffset = EditorGUILayout.Slider("Top Offset", SelectedBuilding.topOffset, 0f, 1 - SelectedBuilding.bottomOffset);
                 SelectedBuilding.bottomOffset = EditorGUILayout.Slider("Bottom Offset", SelectedBuilding.bottomOffset, 0f, 1 - SelectedBuilding.topOffset);
                 SelectedBuilding.edgeOffset = EditorGUILayout.Slider("Edge Offset", SelectedBuilding.edgeOffset, 0f, 1f);
@@ -163,11 +183,6 @@ public class BuildingCreatorEditor : Editor {
 
         // Handles LMBD input
         void HandleLeftMouseDown() {
-            // if (BC.buildings.Count == 0) CreateNewBuilding();
-            // SelectBuildingUnderMouse();
-            // if (SelectionInfo.mouseIsOverPoint) SelectPointUnderMouse();
-            // else CreateNewPoint();
-
             if (BC.buildings.Count == 0) {
                 CreateNewBuilding();
                 CreateNewPoint();
@@ -226,7 +241,7 @@ public class BuildingCreatorEditor : Editor {
             for (int buildingIndex = 0; buildingIndex < BC.buildings.Count; buildingIndex++) {
                 Building currentBuilding = BC.buildings[buildingIndex];
                 for (int i = 0; i < currentBuilding.points.Count; i++) {
-                    if (Vector3.Distance(mousePosition, currentBuilding.points[i]) < BC.handleRadius) {
+                    if (Vector3.Distance(mousePosition, currentBuilding.points[i]) < BCMenu.handleRadius) {
                         mouseOverPointIndex = i;
                         SelectionInfo.mouseIsOverPoint = true;
                         SelectionInfo.mouseIsOverLine = false;
@@ -247,7 +262,7 @@ public class BuildingCreatorEditor : Editor {
                 SelectionInfo.mouseIsOverLine = false;
                 SelectionInfo.mouseOverLineIndex = -1;
             } else {
-                float closestLineDistance = BC.handleRadius;
+                float closestLineDistance = BCMenu.handleRadius;
                 for (int buildingIndex = 0; buildingIndex < BC.buildings.Count; buildingIndex++) {
                     Building currentBuilding = BC.buildings[buildingIndex];
                     for (int i = 0; i < currentBuilding.points.Count; i++) {
@@ -354,15 +369,15 @@ public class BuildingCreatorEditor : Editor {
                 if (mouseIsOverThisLine) {
                     Handles.color = hover;
                     Handles.DrawLine(thisPoint, nextPoint, 4);
-                    if (BC.showOutline) Handles.DrawLine(aboveThisPoint, aboveNextPoint, 4);
-                } else if (BC.showOutline) {
+                    if (BCMenu.showOutline) Handles.DrawLine(aboveThisPoint, aboveNextPoint, 4);
+                } else if (BCMenu.showOutline) {
                     Handles.color = (currentBuildingIsSelected) ? activeLine : deselected;
                     Handles.DrawDottedLine(thisPoint, nextPoint, 4);
-                    if (BC.showOutline) Handles.DrawDottedLine(aboveThisPoint, aboveNextPoint, 4);
+                    if (BCMenu.showOutline) Handles.DrawDottedLine(aboveThisPoint, aboveNextPoint, 4);
                 }
 
                 // Discs
-                if (BC.showHandles) {
+                if (BCMenu.showHandles) {
                     if (mouseIsOverThisPoint && Event.current.shift) {
                         Handles.color = (SelectionInfo.pointIsBeingDragged) ? dragged : activeLine;
                     } else if (mouseIsOverThisPoint) {
@@ -370,11 +385,11 @@ public class BuildingCreatorEditor : Editor {
                     } else {
                         Handles.color = (currentBuildingIsSelected) ? idle : deselected;    
                     }
-                    Handles.DrawSolidDisc(thisPoint, Vector3.up, BC.handleRadius);
+                    Handles.DrawSolidDisc(thisPoint, Vector3.up, BCMenu.handleRadius);
                 }
                 
                 // Draw Vertical Lines
-                if (BC.showOutline){
+                if (BCMenu.showOutline){
                     if (thisPointIsBeingDragged) {
                         Handles.color = dragged;
                     } else if (mouseIsOverThisPoint) {
@@ -388,8 +403,8 @@ public class BuildingCreatorEditor : Editor {
                 }
 
                 // Offset guides
-                if (BC.showGuides) {
-                    Handles.color = new Color(0f, 0.4f, 0f);
+                if (BCMenu.showGuides) {
+                    Handles.color = new Color(0f, 0.8f, 0f);
                     Vector3 direction = (nextPoint - thisPoint).normalized;
                     float wallLength = (nextPoint - thisPoint).magnitude;
                     Vector3 p1 = thisPoint + direction * currentBuilding.edgeOffset * wallLength/2;
@@ -405,19 +420,16 @@ public class BuildingCreatorEditor : Editor {
             }
         }
 
-        if ((BC.showMesh || BC.showWindows) && meshHasChanged) {
+        if (meshHasChanged) {
             ClearMesh();
             SetBuildingMeshes();
-            UpdateComponents();
-        } else if (!BC.showMesh) {
-            ClearMesh();
             UpdateComponents();
         }
         meshHasChanged = false;
         buildingHasChanged = false;
     }
 
-    // Create mesh of all buildings
+    // Create/Set mesh of all buildings
     void SetBuildingMeshes() {
         for (int currentBuildingIndex = 0; currentBuildingIndex < BC.buildings.Count; currentBuildingIndex++) {
             // Current building in this context
@@ -483,13 +495,11 @@ public class BuildingCreatorEditor : Editor {
                 vertices.AddRange(verts);
                 triangles.AddRange(tris);
             }
-
-            // Apply to mesh
             currentBuilding.buildingMesh.vertices = vertices.ToArray();
             currentBuilding.buildingMesh.triangles = triangles.ToArray();
 
             // Windows
-            if (BC.showWindows && currentBuilding.windowHeight >= 5 && currentBuilding.windowWidth >= 5) {
+            if (currentBuilding.showWindowMesh && currentBuilding.windowHeight >= 5 && currentBuilding.windowWidth >= 5) {
                 List<Vector3> verticesW = new List<Vector3>();
                 List<int> trianglesW = new List<int>();
                 for (int currentPointIndex = 0; currentPointIndex < currentBuilding.points.Count; currentPointIndex++) {
@@ -563,14 +573,14 @@ public class BuildingCreatorEditor : Editor {
 
         for (int i = 0; i < BC.buildings.Count; i++) {
             CombineInstance buildingMesh = new CombineInstance();
-            if (BC.buildings[i].buildingMesh && BC.showMesh) {
+            if (BC.buildings[i].buildingMesh && BC.buildings[i].showBuildingMesh) {
                 buildingMesh.mesh = BC.buildings[i].buildingMesh;
                 meshes.Add(buildingMesh);
             }
         }
         for (int i = 0; i < BC.buildings.Count; i++) {
             CombineInstance windowMesh = new CombineInstance();
-            if (BC.buildings[i].windowMesh && BC.showWindows) {
+            if (BC.buildings[i].windowMesh && BC.buildings[i].showWindowMesh) {
                 windowMesh.mesh = BC.buildings[i].windowMesh;
                 meshes.Add(windowMesh);
             }
@@ -582,13 +592,13 @@ public class BuildingCreatorEditor : Editor {
         // Materials
         List<Material> materials = new List<Material>();
         materials.Clear();
-        if (BC.showMesh) {
-            for (int i = 0; i < BC.buildings.Count; i++) {
+        for (int i = 0; i < BC.buildings.Count; i++) {
+            if (BC.buildings[i].buildingMaterial && BC.buildings[i].showBuildingMesh) {
                 materials.Add(BC.buildings[i].buildingMaterial);
             }
         }
-        if (BC.showWindows) {
-            for (int i = 0; i < BC.buildings.Count; i++) {
+        for (int i = 0; i < BC.buildings.Count; i++) {
+            if (BC.buildings[i].windowMaterial && BC.buildings[i].showWindowMesh) {
                 materials.Add(BC.buildings[i].windowMaterial);
             }
         }
@@ -644,8 +654,8 @@ public class BuildingCreatorEditor : Editor {
     }
 
     // Shorthand getting GUIContent with a tooltip
-    GUIContent TT(string text, string tooltip) {
-        return new GUIContent(text, tooltip);
-    }
+    // GUIContent TT(string text, string tooltip) {
+    //     return new GUIContent(text, tooltip);
+    // }
 
 }
