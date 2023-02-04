@@ -22,6 +22,10 @@ public class BuildingCreatorEditor : Editor {
         Rect rect = GUILayoutUtility.GetRect(18, 18, 30f, 30f);
         EditorGUI.ProgressBar(rect, 1, "Building Creator");
 
+        // Edit Modes
+        string[] options = {"Shape Mode", "Move Mode"};
+        BCMenu.mode = GUILayout.Toolbar(BCMenu.mode, options);
+
         // Debug info foldout
         BCMenu.showDebugInfo = EditorGUILayout.Foldout(BCMenu.showDebugInfo, "Debug Info");
         if (BCMenu.showDebugInfo) {

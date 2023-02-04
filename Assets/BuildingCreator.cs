@@ -82,6 +82,7 @@ public static class SelectionInfo {
 
 // This class stores info used for the inspector menu
 public static class BCMenu {
+    public static int mode;
     public static bool showDebugInfo = false; 
     public static bool showViewSettings = false;
     public static bool showOutline = true;
