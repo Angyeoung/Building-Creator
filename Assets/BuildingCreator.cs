@@ -30,7 +30,7 @@ public class BuildingCreator : MonoBehaviour {
 // Class for individual building
 [System.Serializable]
 public class Building {
-    public string name = "Untitled";
+    public string name;
     // List of points for the buildin
     public List<Vector3> points = new List<Vector3>();
     // Mesh of the building
@@ -59,6 +59,10 @@ public class Building {
     // Gaps
     public float horizontalGap = 1;
     public float verticalGap = 1;
+    // Constructor
+    public Building(string name = "Untitled") {
+        this.name = name;
+    }
 }
 
 // This class stores selection information
@@ -76,6 +80,7 @@ public static class SelectionInfo {
     public static bool mouseIsOverLine = false;
 }
 
+// This class stores info used for the inspector menu
 public static class BCMenu {
     public static bool showDebugInfo = false; 
     public static bool showViewSettings = false;

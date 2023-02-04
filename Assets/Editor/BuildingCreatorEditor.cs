@@ -169,9 +169,7 @@ public class BuildingCreatorEditor : Editor {
     // Handles input
     void HandleInput(Event guiEvent) {
         Ray mouseRay = HandleUtility.GUIPointToWorldRay(guiEvent.mousePosition);
-        float drawPlaneHeight = 0;
-        float distanceToDrawPlane = (drawPlaneHeight - mouseRay.origin.y) / mouseRay.direction.y;
-        Vector3 mousePosition = mouseRay.GetPoint(distanceToDrawPlane);
+        Vector3 mousePosition = mouseRay.GetPoint(-mouseRay.origin.y / mouseRay.direction.y);
 
         if (guiEvent.type == EventType.MouseDown && guiEvent.button == 0 && guiEvent.modifiers == EventModifiers.Shift) 
             HandleShiftLeftMouseDown();
@@ -294,7 +292,7 @@ public class BuildingCreatorEditor : Editor {
         // Create new building
         void CreateNewBuilding() {
             Undo.RecordObject(BC, "Create Building");
-            BC.buildings.Add(new Building());
+            BC.buildings.Add(new Building("Building " + BC.buildings.Count));
             SelectionInfo.buildingIndex = BC.buildings.Count - 1;
             meshHasChanged = true;
         }
