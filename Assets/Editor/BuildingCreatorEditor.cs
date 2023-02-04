@@ -109,9 +109,9 @@ public class BuildingCreatorEditor : Editor {
             EditorGUILayout.Space();
             
             // Material
-            EditorGUILayout.Space();
             SelectedBuilding.buildingMaterial = (Material)EditorGUILayout.ObjectField("Building Material", SelectedBuilding.buildingMaterial, typeof(Material), true);
             SelectedBuilding.windowMaterial = (Material)EditorGUILayout.ObjectField("Window Material", SelectedBuilding.windowMaterial, typeof(Material), true);
+            EditorGUILayout.Space();
 
             // Window Settings Foldout
             BCMenu.showWindowSettings = EditorGUILayout.Foldout(BCMenu.showWindowSettings, "Window Settings");
@@ -128,7 +128,10 @@ public class BuildingCreatorEditor : Editor {
                 SelectedBuilding.horizontalGap = EditorGUILayout.FloatField("Horizontal Gap", SelectedBuilding.horizontalGap);
             }
 
+        } else if (BCMenu.showSelectedBuildingInfo && SelectionInfo.buildingIndex == -1) {
+            EditorGUILayout.HelpBox("No Building Selected", MessageType.Warning);
         }
+        EditorGUILayout.Space(15f);
 
         // Delete buildings if needed (While maintaining proper selection)
         if (buildingDeleteIndex != -1) {
@@ -172,13 +175,13 @@ public class BuildingCreatorEditor : Editor {
 
         if (guiEvent.type == EventType.MouseDown && guiEvent.button == 0 && guiEvent.modifiers == EventModifiers.Shift) 
             HandleShiftLeftMouseDown();
-        if (guiEvent.type == EventType.MouseDown && guiEvent.button == 0 && guiEvent.modifiers == EventModifiers.None) 
+        else if (guiEvent.type == EventType.MouseDown && guiEvent.button == 0 && guiEvent.modifiers == EventModifiers.None) 
             HandleLeftMouseDown();
-        if (guiEvent.type == EventType.MouseUp && guiEvent.button == 0) 
+        else if (guiEvent.type == EventType.MouseUp && guiEvent.button == 0) 
             HandleLeftMouseUp();
-        if (guiEvent.type == EventType.MouseDrag && guiEvent.button == 0 && guiEvent.modifiers == EventModifiers.None) 
+        else if (guiEvent.type == EventType.MouseDrag && guiEvent.button == 0 && guiEvent.modifiers == EventModifiers.None) 
             HandleLeftMouseDrag();
-        if (!SelectionInfo.pointIsBeingDragged) 
+        else if (!SelectionInfo.pointIsBeingDragged) 
             UpdateMouseOverInfo();
 
         // Handles LMBD input
@@ -652,10 +655,5 @@ public class BuildingCreatorEditor : Editor {
             return BuildingCreator.main.buildings[SelectionInfo.buildingIndex];
         }
     }
-
-    // Shorthand getting GUIContent with a tooltip
-    // GUIContent TT(string text, string tooltip) {
-    //     return new GUIContent(text, tooltip);
-    // }
 
 }
