@@ -49,7 +49,8 @@ public class BuildingCreatorEditor : Editor {
         EditorGUILayout.Space(15f);
         BCMenu.showViewSettings = EditorGUILayout.Foldout(BCMenu.showViewSettings, "View Settings");
         if (BCMenu.showViewSettings) {
-            BCMenu.showOutline = EditorGUILayout.ToggleLeft("Show Outline", BCMenu.showOutline);
+            BCMenu.showOutline2D = EditorGUILayout.ToggleLeft("Show 2D Outline", BCMenu.showOutline2D);
+            BCMenu.showOutline3D = EditorGUILayout.ToggleLeft("Show 3D Outline", BCMenu.showOutline3D);
             BCMenu.showGuides = EditorGUILayout.ToggleLeft("Show Guides", BCMenu.showGuides);
             BCMenu.showHandles = EditorGUILayout.ToggleLeft("Show Handles", BCMenu.showHandles);
             if (BCMenu.showHandles) BCMenu.handleRadius = EditorGUILayout.Slider("", BCMenu.handleRadius, 0f, 20f);
@@ -158,7 +159,7 @@ public class BuildingCreatorEditor : Editor {
     void OnSceneGUI() {
         Event guiEvent = Event.current;
         if (guiEvent.type == EventType.Repaint)
-            Draw();
+            Draw(guiEvent);
         else if (guiEvent.type == EventType.Layout)
             HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
         else {
@@ -206,9 +207,11 @@ public class BuildingCreatorEditor : Editor {
             } else if (BCMenu.mode == 1) {
                 if (SelectionInfo.mouseIsOverPoint || SelectionInfo.mouseIsOverLine) {
                     SelectBuildingUnderMouse();
-                    SelectPointUnderMouse();
                     StartDrag();
                 }
+            } else if (BCMenu.mode == 2) {
+                SelectBuildingUnderMouse();
+                StartDrag();
             }
         }
 
@@ -225,14 +228,23 @@ public class BuildingCreatorEditor : Editor {
                 }
             } else if (BCMenu.mode == 1) {
                 if (SelectionInfo.mouseIsBeingDragged) {
-                    // SelectedBuilding.Drag(SelectionInfo.positionAtDragStart);
-                    // Undo.RecordObject(BC, "Move building");
-                    // SelectedBuilding.Drag(mousePosition);
+                    List<Vector3> pointsAtDragEnd = new List<Vector3>(SelectedBuilding.points);
+                    SelectedBuilding.points = SelectionInfo.pointsAtDragStart;
+                    Undo.RecordObject(BC, "Move building");
+                    SelectedBuilding.points = pointsAtDragEnd;
                     SelectionInfo.mouseIsBeingDragged = false;
                     buildingHasChanged = true;
                     meshHasChanged = true;
                 }
-            }    
+            } else if (BCMenu.mode == 2) {
+                List<Vector3> pointsAtDragEnd = new List<Vector3>(SelectedBuilding.points);
+                SelectedBuilding.points = SelectionInfo.pointsAtDragStart;
+                Undo.RecordObject(BC, "Rotate building");
+                SelectedBuilding.points = pointsAtDragEnd;
+                SelectionInfo.mouseIsBeingDragged = false;
+                buildingHasChanged = true;
+                meshHasChanged = true;
+            }
         }
 
         // Handles Shift + LMBD input
@@ -246,8 +258,10 @@ public class BuildingCreatorEditor : Editor {
                     CreateNewPoint();
                 }
             }
-
             // else if (BCMenu.mode == 1) {
+
+            // }
+            // else if (BCMenu.mode == 2) {
 
             // }
         }
@@ -259,11 +273,18 @@ public class BuildingCreatorEditor : Editor {
                     SelectedBuilding.points[SelectionInfo.mouseOverPointIndex] = mousePosition;
                 }
             } else if (BCMenu.mode == 1) {
-                if (SelectionInfo.mouseOverPointIndex != -1) {
+                if (SelectionInfo.mouseOverBuildingIndex != -1) {
                     Vector3 displacement = mousePosition - SelectionInfo.positionAtDragStart;
                     SelectedBuilding.points = SelectionInfo.pointsAtDragStart.Map(a => a + displacement);
                 }
-            }    
+            } else if (BCMenu.mode == 2) {
+                Vector3 initialDirection = (SelectionInfo.positionAtDragStart - SelectionInfo.centerAtDragStart).normalized;
+                Vector3 currentDirection = (mousePosition - SelectionInfo.centerAtDragStart).normalized;
+                float angle = Vector3.SignedAngle(initialDirection, currentDirection, Vector3.up);
+                Quaternion rotation = Quaternion.AngleAxis(angle, Vector3.up);
+                List<Vector3> relativePositions = SelectionInfo.pointsAtDragStart.Map(p => p - SelectionInfo.centerAtDragStart);
+                SelectedBuilding.points = relativePositions.Map(p => (rotation * p) + SelectionInfo.centerAtDragStart);
+            }
             buildingHasChanged = true;
             meshHasChanged = true;
  
@@ -387,7 +408,10 @@ public class BuildingCreatorEditor : Editor {
     }
 
     // Draws handles and meshes
-    void Draw() {
+    void Draw(Event guiEvent) {
+        // Mouse Position 
+        Ray mouseRay = HandleUtility.GUIPointToWorldRay(guiEvent.mousePosition);
+        Vector3 mousePosition = mouseRay.GetPoint(-mouseRay.origin.y / mouseRay.direction.y);
         // For each building
         for (int buildingIndex = 0; buildingIndex < BC.buildings.Count; buildingIndex++) {    
             Building currentBuilding = BC.buildings[buildingIndex];
@@ -397,8 +421,11 @@ public class BuildingCreatorEditor : Editor {
             
             // For each point in this building
             for (int i = 0; i < currentBuilding.points.Count; i++) {
-                Color deselected = Color.gray, activeLine = Color.red, 
-                    hover = Color.blue, dragged = Color.black, idle = Color.white;
+                Color outline    = new Color(0f, 0.8f, 0f), 
+                      deselected = Color.gray,  activeLine = Color.red, 
+                      hover      = Color.blue,  dragged    = Color.black, 
+                      idle       = Color.white, move       = Color.green;
+                      
                 Vector3 thisPoint = currentBuilding.points.GetItem(i);
                 Vector3 nextPoint = currentBuilding.points.GetItem(i + 1);
                 Vector3 aboveThisPoint = thisPoint + Vector3.up * h;
@@ -407,46 +434,61 @@ public class BuildingCreatorEditor : Editor {
                 bool mouseIsOverThisLine = (i == SelectionInfo.mouseOverLineIndex && mouseIsOverCurrentBuilding);
                 bool thisPointIsBeingDragged = (mouseIsOverThisPoint && SelectionInfo.mouseIsBeingDragged);
                 
-                // Lines
-                if (mouseIsOverThisLine) {
-                    Handles.color = hover;
-                    Handles.DrawLine(thisPoint, nextPoint, 4);
-                    if (BCMenu.showOutline) Handles.DrawLine(aboveThisPoint, aboveNextPoint, 4);
-                } else if (BCMenu.showOutline) {
-                    Handles.color = (currentBuildingIsSelected) ? activeLine : deselected;
-                    Handles.DrawDottedLine(thisPoint, nextPoint, 4);
-                    if (BCMenu.showOutline) Handles.DrawDottedLine(aboveThisPoint, aboveNextPoint, 4);
+                // Bottom lines
+                if (BCMenu.showOutline2D || BCMenu.showOutline3D) {
+                    // On hover
+                    if (mouseIsOverThisLine)
+                        Handles.color = hover;
+                    // Active / Deselected
+                    else
+                        Handles.color = (currentBuildingIsSelected) ? activeLine : deselected;
+                    
+                    // Draw
+                    // On hover
+                    if (mouseIsOverThisLine)
+                        Handles.DrawLine(thisPoint, nextPoint, 4);
+                    // Active / Deselected
+                    else
+                        Handles.DrawDottedLine(thisPoint, nextPoint, 4);
                 }
 
                 // Discs
                 if (BCMenu.showHandles) {
-                    if (mouseIsOverThisPoint && Event.current.shift) {
-                        Handles.color = (SelectionInfo.mouseIsBeingDragged) ? dragged : activeLine;
-                    } else if (mouseIsOverThisPoint) {
-                        Handles.color = (SelectionInfo.mouseIsBeingDragged) ? dragged : hover;
-                    } else {
-                        Handles.color = (currentBuildingIsSelected) ? idle : deselected;    
-                    }
+                    // Color
+                    // On Drag
+                    if (mouseIsOverThisPoint && SelectionInfo.mouseIsBeingDragged)
+                        Handles.color = dragged;
+                    // On Hover
+                    else if (mouseIsOverThisPoint)
+                        Handles.color = (Event.current.shift) ? activeLine : hover;
+                    // Selected
+                    else if (currentBuildingIsSelected)
+                        Handles.color = (BCMenu.mode == 1) ? move : idle;
+                    // Deselected
+                    else
+                        Handles.color = deselected;
+                    // Draw Disc
                     Handles.DrawSolidDisc(thisPoint, Vector3.up, BCMenu.handleRadius);
                 }
                 
-                // Draw Vertical Lines
-                if (BCMenu.showOutline){
-                    if (thisPointIsBeingDragged) {
+                // Vertical Lines
+                if (BCMenu.showOutline3D){
+                    // Color
+                    if (thisPointIsBeingDragged)
                         Handles.color = dragged;
-                    } else if (mouseIsOverThisPoint) {
+                    else if (mouseIsOverThisPoint)
                         Handles.color = hover;
-                    } else if (currentBuildingIsSelected) {
+                    else if (currentBuildingIsSelected)
                         Handles.color = activeLine;
-                    } else {
+                    else
                         Handles.color = deselected;
-                    }
+                    // Draw
                     Handles.DrawDottedLine(thisPoint, aboveThisPoint, 4f);
                 }
 
                 // Offset guides
                 if (BCMenu.showGuides) {
-                    Handles.color = new Color(0f, 0.8f, 0f);
+                    Handles.color = outline;
                     Vector3 direction = (nextPoint - thisPoint).normalized;
                     float wallLength = (nextPoint - thisPoint).magnitude;
                     Vector3 p1 = thisPoint + direction * currentBuilding.edgeOffset * wallLength/2;
@@ -458,8 +500,18 @@ public class BuildingCreatorEditor : Editor {
                     Handles.DrawLine(thisPoint + Vector3.up * (1 - currentBuilding.topOffset) * h, 
                                     nextPoint + Vector3.up * (1 - currentBuilding.topOffset) * h);
                 }
-            
             }
+        
+            // Center point
+            if (BCMenu.mode == 2) {
+                Handles.color = (currentBuildingIsSelected) ? Color.magenta : Color.gray;
+                Vector3 center = currentBuilding.CenterPoint;
+                Handles.DrawSolidDisc(center, Vector3.up, 3f);
+                if (SelectionInfo.mouseIsBeingDragged) {
+                    Handles.DrawDottedLine(SelectedBuilding.CenterPoint, mousePosition, 4f);
+                }
+            }
+
         }
 
         if (meshHasChanged) {
@@ -696,3 +748,4 @@ public class BuildingCreatorEditor : Editor {
     }
 
 }
+

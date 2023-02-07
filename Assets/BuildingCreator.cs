@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 // This class is used for storing building information and settings
@@ -66,6 +67,13 @@ public class Building {
     public void MoveBy(Vector3 displacement) {
         this.points = this.points.Map(a => a + displacement);
     }
+    public Vector3 CenterPoint { get {
+        return new Vector3(
+            this.points.Average(v => v.x),
+            this.points.Average(v => v.y),
+            this.points.Average(v => v.z)
+        );
+    }}
 }
 
 // This class stores selection information
@@ -74,6 +82,16 @@ public static class SelectionInfo {
     public static bool mouseIsBeingDragged = false;
     public static Vector3 positionAtDragStart;
     public static List<Vector3> pointsAtDragStart;
+    public static Vector3 centerAtDragStart { get {
+        if (buildingIndex == -1)
+            return Vector3.zero;
+        else
+            return new Vector3(
+                pointsAtDragStart.Average(v => v.x),
+                pointsAtDragStart.Average(v => v.y),
+                pointsAtDragStart.Average(v => v.z)
+            );
+    }}
     // Selection
     public static int buildingIndex;
     // Mouse Over
@@ -92,8 +110,10 @@ public static class BCMenu {
     public static bool showDebugInfo = false;
     // Is the view settings foldout visible? 
     public static bool showViewSettings = false;
-    // Are outlines visible?
-    public static bool showOutline = true;
+    // Is the 3D outline visible?
+    public static bool showOutline3D = true;
+    // Is the 2D outline visible?
+    public static bool showOutline2D = true;
     // Are guides visible?
     public static bool showGuides = false;
     // Are handles visible?
