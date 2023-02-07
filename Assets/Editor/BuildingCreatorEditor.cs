@@ -32,7 +32,7 @@ public class BuildingCreatorEditor : Editor {
             EditorGUILayout.Space(5f);
             EditorGUILayout.ToggleLeft("Mouse over line?", SelectionInfo.mouseIsOverLine);
             EditorGUILayout.ToggleLeft("Mouse over point?", SelectionInfo.mouseIsOverPoint);
-            EditorGUILayout.ToggleLeft("Point being dragged?", SelectionInfo.pointIsBeingDragged);
+            EditorGUILayout.ToggleLeft("Point being dragged?", SelectionInfo.mouseIsBeingDragged);
             EditorGUILayout.Space(5f);
             EditorGUILayout.IntField("Mouse Over Building Index", SelectionInfo.mouseOverBuildingIndex);
             EditorGUILayout.IntField("Mouse Over Line Index", SelectionInfo.mouseOverLineIndex);
@@ -183,7 +183,7 @@ public class BuildingCreatorEditor : Editor {
             HandleLeftMouseUp();
         else if (guiEvent.type == EventType.MouseDrag && guiEvent.button == 0 && guiEvent.modifiers == EventModifiers.None) 
             HandleLeftMouseDrag();
-        else if (!SelectionInfo.pointIsBeingDragged) 
+        else if (!SelectionInfo.mouseIsBeingDragged) 
             UpdateSelectionInfo();
 
         // Handles LMBD input
@@ -204,6 +204,7 @@ public class BuildingCreatorEditor : Editor {
                 } else if (SelectionInfo.mouseIsOverPoint) {
                     SelectBuildingUnderMouse();
                     SelectPointUnderMouse();
+                    StartDrag(); 
                 } else if (SelectionInfo.buildingIndex == -1 && !SelectionInfo.mouseIsOverLine) {
                     CreateNewBuilding();
                     CreateNewPoint();
@@ -214,9 +215,10 @@ public class BuildingCreatorEditor : Editor {
             }
 
             void MoveMode() {
-                if (SelectionInfo.mouseIsOverPoint) {
+                if (SelectionInfo.mouseIsOverPoint || SelectionInfo.mouseIsOverLine) {
                     SelectBuildingUnderMouse();
                     SelectPointUnderMouse();
+                    StartDrag();
                 }
             }
         }
@@ -233,22 +235,22 @@ public class BuildingCreatorEditor : Editor {
             }
 
             void ShapeMode() {
-                if (SelectionInfo.pointIsBeingDragged) {
+                if (SelectionInfo.mouseIsBeingDragged) {
                     SelectedBuilding.points[SelectionInfo.mouseOverPointIndex] = SelectionInfo.positionAtDragStart;
                     Undo.RecordObject(BC, "Move point");
                     SelectedBuilding.points[SelectionInfo.mouseOverPointIndex] = mousePosition;
-                    SelectionInfo.pointIsBeingDragged = false;
+                    SelectionInfo.mouseIsBeingDragged = false;
                     buildingHasChanged = true;
                     meshHasChanged = true;
                 }
             }
 
             void MoveMode() {
-                if (SelectionInfo.pointIsBeingDragged) {
+                if (SelectionInfo.mouseIsBeingDragged) {
                     // SelectedBuilding.Drag(SelectionInfo.positionAtDragStart);
                     // Undo.RecordObject(BC, "Move building");
                     // SelectedBuilding.Drag(mousePosition);
-                    SelectionInfo.pointIsBeingDragged = false;
+                    SelectionInfo.mouseIsBeingDragged = false;
                     buildingHasChanged = true;
                     meshHasChanged = true;
                 }
@@ -388,17 +390,20 @@ public class BuildingCreatorEditor : Editor {
             if (SelectionInfo.mouseOverBuildingIndex != -1) {
                 SelectionInfo.buildingIndex = SelectionInfo.mouseOverBuildingIndex;
                 buildingHasChanged = true;
-                meshHasChanged = true;
             }
         }
 
         // Select the point under the mouse
         void SelectPointUnderMouse() {
-            SelectionInfo.pointIsBeingDragged = true;
             SelectionInfo.mouseIsOverPoint = true;
             SelectionInfo.mouseIsOverLine = false;
             SelectionInfo.mouseOverLineIndex = -1;
-            SelectionInfo.positionAtDragStart = SelectedBuilding.points[SelectionInfo.mouseOverPointIndex];
+            buildingHasChanged = true;
+        }
+
+        void StartDrag() {
+            SelectionInfo.mouseIsBeingDragged = true;
+            SelectionInfo.positionAtDragStart = mousePosition;
             SelectionInfo.pointsAtDragStart = new List<Vector3>(SelectedBuilding.points);
             buildingHasChanged = true;
             meshHasChanged = true;
@@ -413,7 +418,7 @@ public class BuildingCreatorEditor : Editor {
                 SelectionInfo.mouseOverBuildingIndex = -1;
                 SelectionInfo.buildingIndex = -1;
             }
-            SelectionInfo.pointIsBeingDragged = false;
+            SelectionInfo.mouseIsBeingDragged = false;
             SelectionInfo.mouseIsOverPoint = false;
             buildingHasChanged = true;
             meshHasChanged = true;
@@ -440,7 +445,7 @@ public class BuildingCreatorEditor : Editor {
                 Vector3 aboveNextPoint = nextPoint + Vector3.up * h;
                 bool mouseIsOverThisPoint = (i == SelectionInfo.mouseOverPointIndex && mouseIsOverCurrentBuilding);
                 bool mouseIsOverThisLine = (i == SelectionInfo.mouseOverLineIndex && mouseIsOverCurrentBuilding);
-                bool thisPointIsBeingDragged = (mouseIsOverThisPoint && SelectionInfo.pointIsBeingDragged);
+                bool thisPointIsBeingDragged = (mouseIsOverThisPoint && SelectionInfo.mouseIsBeingDragged);
                 
                 // Lines
                 if (mouseIsOverThisLine) {
@@ -456,9 +461,9 @@ public class BuildingCreatorEditor : Editor {
                 // Discs
                 if (BCMenu.showHandles) {
                     if (mouseIsOverThisPoint && Event.current.shift) {
-                        Handles.color = (SelectionInfo.pointIsBeingDragged) ? dragged : activeLine;
+                        Handles.color = (SelectionInfo.mouseIsBeingDragged) ? dragged : activeLine;
                     } else if (mouseIsOverThisPoint) {
-                        Handles.color = (SelectionInfo.pointIsBeingDragged) ? dragged : hover;
+                        Handles.color = (SelectionInfo.mouseIsBeingDragged) ? dragged : hover;
                     } else {
                         Handles.color = (currentBuildingIsSelected) ? idle : deselected;    
                     }

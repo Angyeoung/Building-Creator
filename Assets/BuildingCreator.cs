@@ -68,7 +68,7 @@ public class Building {
 // This class stores selection information
 public static class SelectionInfo {
     // Drag
-    public static bool pointIsBeingDragged = false;
+    public static bool mouseIsBeingDragged = false;
     public static Vector3 positionAtDragStart;
     public static List<Vector3> pointsAtDragStart;
     // Selection
