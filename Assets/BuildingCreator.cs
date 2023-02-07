@@ -70,6 +70,7 @@ public static class SelectionInfo {
     // Drag
     public static bool pointIsBeingDragged = false;
     public static Vector3 positionAtDragStart;
+    public static List<Vector3> pointsAtDragStart;
     // Selection
     public static int buildingIndex;
     // Mouse Over
@@ -82,14 +83,24 @@ public static class SelectionInfo {
 
 // This class stores info used for the inspector menu
 public static class BCMenu {
-    public static int mode;
-    public static bool showDebugInfo = false; 
+    // [0: "Shape Mode", 1: "Move Mode"]
+    public static int mode = 0;
+    // Is the debug info foldout visible?
+    public static bool showDebugInfo = false;
+    // Is the view settings foldout visible? 
     public static bool showViewSettings = false;
+    // Are outlines visible?
     public static bool showOutline = true;
+    // Are guides visible?
     public static bool showGuides = false;
+    // Are handles visible?
     public static bool showHandles = true;
+    // Radius to use for the handles
     public static float handleRadius = 1f;
+    // Is the building list foldout visible?
     public static bool showBuildingsList = false;
+    // Is the selected building foldout visible?
     public static bool showSelectedBuildingInfo = false;
+    // Is the window settings foldout visible?
     public static bool showWindowSettings = false;
 }
