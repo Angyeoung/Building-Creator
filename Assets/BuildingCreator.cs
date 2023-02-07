@@ -63,6 +63,9 @@ public class Building {
     public Building(string name = "Untitled") {
         this.name = name;
     }
+    public void MoveBy(Vector3 displacement) {
+        this.points = this.points.Map(a => a + displacement);
+    }
 }
 
 // This class stores selection information

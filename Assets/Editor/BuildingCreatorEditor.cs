@@ -23,7 +23,7 @@ public class BuildingCreatorEditor : Editor {
         EditorGUI.ProgressBar(rect, 1, "Building Creator");
 
         // Edit Modes
-        string[] options = {"Shape Mode", "Move Mode"};
+        string[] options = {"Shape", "Move", "Rotate"};
         BCMenu.mode = GUILayout.Toolbar(BCMenu.mode, options);
 
         // Debug info foldout
@@ -188,16 +188,7 @@ public class BuildingCreatorEditor : Editor {
 
         // Handles LMBD input
         void HandleLeftMouseDown() {
-            switch(BCMenu.mode) {
-                case 0:
-                    ShapeMode();
-                    break;
-                case 1:
-                    MoveMode();
-                    break;
-            }
-            
-            void ShapeMode() {
+            if (BCMenu.mode == 0) {
                 if (BC.buildings.Count == 0) {
                     CreateNewBuilding();
                     CreateNewPoint();
@@ -212,9 +203,7 @@ public class BuildingCreatorEditor : Editor {
                     SelectBuildingUnderMouse();
                     CreateNewPoint();
                 }
-            }
-
-            void MoveMode() {
+            } else if (BCMenu.mode == 1) {
                 if (SelectionInfo.mouseIsOverPoint || SelectionInfo.mouseIsOverLine) {
                     SelectBuildingUnderMouse();
                     SelectPointUnderMouse();
@@ -225,16 +214,7 @@ public class BuildingCreatorEditor : Editor {
 
         // Handles LMBU input
         void HandleLeftMouseUp() {
-            switch(BCMenu.mode) {
-                case 0:
-                    ShapeMode();
-                    break;
-                case 1:
-                    MoveMode();
-                    break;
-            }
-
-            void ShapeMode() {
+            if (BCMenu.mode == 0) {
                 if (SelectionInfo.mouseIsBeingDragged) {
                     SelectedBuilding.points[SelectionInfo.mouseOverPointIndex] = SelectionInfo.positionAtDragStart;
                     Undo.RecordObject(BC, "Move point");
@@ -243,9 +223,7 @@ public class BuildingCreatorEditor : Editor {
                     buildingHasChanged = true;
                     meshHasChanged = true;
                 }
-            }
-
-            void MoveMode() {
+            } else if (BCMenu.mode == 1) {
                 if (SelectionInfo.mouseIsBeingDragged) {
                     // SelectedBuilding.Drag(SelectionInfo.positionAtDragStart);
                     // Undo.RecordObject(BC, "Move building");
@@ -259,16 +237,7 @@ public class BuildingCreatorEditor : Editor {
 
         // Handles Shift + LMBD input
         void HandleShiftLeftMouseDown() {
-            switch(BCMenu.mode) {
-                case 0:
-                    ShapeMode();
-                    break;
-                // case 1:
-                //     MoveMode();
-                //     break;
-            }
-
-            void ShapeMode() {
+            if (BCMenu.mode == 0) {
                 if (SelectionInfo.mouseIsOverPoint) {
                     SelectBuildingUnderMouse();
                     DeletePointUnderMouse();
@@ -278,36 +247,26 @@ public class BuildingCreatorEditor : Editor {
                 }
             }
 
-            // void MoveMode() {
+            // else if (BCMenu.mode == 1) {
 
             // }
         }
 
         // Handles LMB drag input
-        void HandleLeftMouseDrag() {
-            switch(BCMenu.mode) {
-                case 0:
-                    ShapeMode();
-                    break;
-                case 1:
-                    MoveMode();
-                    break;
-            }
-            buildingHasChanged = true;
-            meshHasChanged = true;
-
-            void ShapeMode() {
+        void HandleLeftMouseDrag() { 
+            if (BCMenu.mode == 0) {
                 if (SelectionInfo.mouseOverPointIndex != -1) {
                     SelectedBuilding.points[SelectionInfo.mouseOverPointIndex] = mousePosition;
                 }
-            }
-
-            void MoveMode() {
+            } else if (BCMenu.mode == 1) {
                 if (SelectionInfo.mouseOverPointIndex != -1) {
                     Vector3 displacement = mousePosition - SelectionInfo.positionAtDragStart;
                     SelectedBuilding.points = SelectionInfo.pointsAtDragStart.Map(a => a + displacement);
                 }
-            }     
+            }    
+            buildingHasChanged = true;
+            meshHasChanged = true;
+ 
         }
 
         // Updates the Selection Info class
@@ -401,6 +360,7 @@ public class BuildingCreatorEditor : Editor {
             buildingHasChanged = true;
         }
 
+        // Start dragging the point/building under the mouse
         void StartDrag() {
             SelectionInfo.mouseIsBeingDragged = true;
             SelectionInfo.positionAtDragStart = mousePosition;
