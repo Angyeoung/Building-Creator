@@ -38,29 +38,29 @@ public class Building {
     public List<Door> doors = new List<Door>();
     // Meshes of the building
     public Mesh buildingMesh = null;
-    public Mesh windowMesh = null;
+    public Mesh windowMesh   = null;
     // Material of the building
     public Material buildingMaterial = null;
-    public Material windowMaterial = null;
-    public Material doorMaterial = null;
+    public Material windowMaterial   = null;
+    public Material doorMaterial     = null;
     // Building Settings
     public bool inverted = false;
     public float height = 10;
     // Visibility
     public bool showBuildingMesh = false;
-    public bool showWindowMesh = false;
-    public bool showDoorMesh = false;
+    public bool showWindowMesh   = false;
+    public bool showDoorMesh     = false;
     // Window settings
-    public float windowHeight = 5;
-    public float windowWidth = 5;
-    public float windowDepth = 0.1f;
+    public float windowHeight =   5f;
+    public float windowWidth  =   5f;
+    public float windowDepth  = 0.1f;
     // Offsets
-    public float topOffset = 0;
+    public float topOffset    = 0f;
     public float bottomOffset = 0f;
-    public float edgeOffset = 0f;
+    public float edgeOffset   = 0f;
     // Gaps
-    public float horizontalGap = 1;
-    public float verticalGap = 1;
+    public float horizontalGap = 1f;
+    public float verticalGap   = 1f;
     // Constructor
     public Building(string name = "Untitled") {
         this.name = name;
@@ -110,36 +110,31 @@ public static class SelectionInfo {
     public static int doorIndex;
     // Mouse Over
     public static int mouseOverBuildingIndex = -1;
-    public static int mouseOverPointIndex = -1;
-    public static int mouseOverLineIndex = -1;
+    public static int mouseOverPointIndex    = -1;
+    public static int mouseOverLineIndex     = -1;
     public static bool mouseIsOverPoint = false;
-    public static bool mouseIsOverLine = false;
+    public static bool mouseIsOverLine  = false;
 }
 
 // This class stores info used for the inspector menu
 public static class BCMenu {
-    // [0: "Shape Mode", 1: "Move Mode"]
+    // [0: "Shape Mode", 1: "Move Mode", 2: "Rotate Mode"]
     public static int mode = 0;
-    // Is the debug info foldout visible?
-    public static bool showDebugInfo;
-    // Is the view settings foldout visible?
-    public static bool showViewSettings;
-    // Is the 3D outline visible?
-    public static bool showOutline3D;
-    // Is the 2D outline visible?
-    public static bool showOutline2D = true;
-    // Are guides visible?
-    public static bool showGuides = false;
-    // Are handles visible?
-    public static bool showHandles = true;
-    // Radius to use for the handles
-    public static float handleRadius = 1f;
-    // Is the building list foldout visible?
-    public static bool showBuildingsList;
-    // Is the selected building foldout visible?
-    public static bool showSelectedBuildingInfo;
-    // Is the window settings foldout visible?
-    public static bool showWindowSettings;
-    // Is the door settings foldout visible?
-    public static bool showDoorSettings;
+    // Foldouts
+    public static bool showDebugInfo      = false;
+    public static bool showViewSettings   = true;
+    public static bool showBuildingsList  = true;
+    public static bool showBuildingInfo   = true;
+    public static bool showWindowSettings = false;
+    public static bool showDoorSettings   = false;
+    
+    // Outlines, Guides and Handles
+    public static bool showOutline2D      = true;
+    public static bool showOutline3D      = true;
+    public static bool showWindowOutlines = false;
+    public static bool showDoorOutlines   = false;
+    public static bool showGuides         = false;
+    public static bool showHandles        = true;
+    public static float handleRadius      = 1f;
+    
 }
