@@ -13,6 +13,7 @@ public class BuildingCreatorEditor : Editor {
     bool buildingHasChanged = true;
     bool meshHasChanged = true;
     Vector2 scrollPos;
+    Vector2 scrollPos2;
 
     // Custom inspector
     public override void OnInspectorGUI() {
@@ -58,11 +59,11 @@ public class BuildingCreatorEditor : Editor {
 
         // Buildings list foldout
         EditorGUILayout.Space(15f);
-        BCMenu.showBuildingsList = EditorGUILayout.Foldout(BCMenu.showBuildingsList, "Buildings List");
         int buildingDeleteIndex = -1;
+        BCMenu.showBuildingsList = EditorGUILayout.Foldout(BCMenu.showBuildingsList, "Buildings List");
         if (BCMenu.showBuildingsList) {
             // Scroll view
-            scrollPos = EditorGUILayout.BeginScrollView(scrollPos, GUILayout.Height(106));  
+            scrollPos = EditorGUILayout.BeginScrollView(scrollPos, GUILayout.Height(65));  
             for (int i = 0; i < BC.buildings.Count; i++)
             {
                 GUILayout.BeginHorizontal();
@@ -102,23 +103,24 @@ public class BuildingCreatorEditor : Editor {
 
         // Selected building info foldout
         EditorGUILayout.Space(15f);
+        int doorDeleteIndex = -1;
         BCMenu.showSelectedBuildingInfo = EditorGUILayout.Foldout(BCMenu.showSelectedBuildingInfo, "Selected Building Info");
         if (BCMenu.showSelectedBuildingInfo && SelectionInfo.buildingIndex != -1) {
-            
-            // General Settings 
+            // General Settings
             EditorGUILayout.Space();
             SelectedBuilding.inverted = EditorGUILayout.ToggleLeft("Inverted", SelectedBuilding.inverted);
             SelectedBuilding.showBuildingMesh = EditorGUILayout.ToggleLeft("Show Building Mesh", SelectedBuilding.showBuildingMesh);
             SelectedBuilding.showWindowMesh = EditorGUILayout.ToggleLeft("Show Window Mesh", SelectedBuilding.showWindowMesh);
+            EditorGUILayout.Space();
             SelectedBuilding.height = EditorGUILayout.FloatField("Building Height", SelectedBuilding.height);
             EditorGUILayout.Space();
-            
             // Material
             SelectedBuilding.buildingMaterial = (Material)EditorGUILayout.ObjectField("Building Material", SelectedBuilding.buildingMaterial, typeof(Material), true);
             SelectedBuilding.windowMaterial = (Material)EditorGUILayout.ObjectField("Window Material", SelectedBuilding.windowMaterial, typeof(Material), true);
-            EditorGUILayout.Space();
+            SelectedBuilding.doorMaterial = (Material)EditorGUILayout.ObjectField("Door Material", SelectedBuilding.doorMaterial, typeof(Material), true);
 
             // Window Settings Foldout
+            EditorGUILayout.Space(15f);
             BCMenu.showWindowSettings = EditorGUILayout.Foldout(BCMenu.showWindowSettings, "Window Settings");
             if (BCMenu.showWindowSettings) {
                 SelectedBuilding.topOffset = EditorGUILayout.Slider("Top Offset", SelectedBuilding.topOffset, 0f, 1 - SelectedBuilding.bottomOffset);
@@ -133,17 +135,73 @@ public class BuildingCreatorEditor : Editor {
                 SelectedBuilding.horizontalGap = EditorGUILayout.FloatField("Horizontal Gap", SelectedBuilding.horizontalGap);
             }
 
-        } else if (BCMenu.showSelectedBuildingInfo && SelectionInfo.buildingIndex == -1) {
+            // Door Settings Foldout
+            EditorGUILayout.Space(15f);
+            BCMenu.showDoorSettings = EditorGUILayout.Foldout(BCMenu.showDoorSettings, "Door Settings");
+            if (BCMenu.showDoorSettings) {
+                // Scroll view
+                if (SelectedBuilding.doors?.Count > 0) {
+                    scrollPos2 = EditorGUILayout.BeginScrollView(scrollPos2, GUILayout.Height(65));  
+                    for (int i = 0; i < SelectedBuilding.doors.Count; i++) {
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label("Door " + i, GUILayout.Width(100));
+                        // Disable the next button if it represents the selected door
+                        GUI.enabled = !(i == SelectionInfo.doorIndex);
+                        if (GUILayout.Button("Select")) {
+                            Undo.RecordObject(BC, "Select Door");
+                            SelectionInfo.doorIndex = i;
+                        }
+                        // Re-enaable the GUI
+                        GUI.enabled = true;
+                        if (GUILayout.Button("Delete")) {
+                            doorDeleteIndex = i;
+                        }
+                        GUILayout.EndHorizontal();
+                    }
+                    EditorGUILayout.EndScrollView();
+                }
+                else {
+                    EditorGUILayout.HelpBox("No Doors", MessageType.Warning);
+                }
+
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("Add Door")) {
+                    SelectedBuilding.doors.Add(new Door());
+                }
+                if (GUILayout.Button("Deselect")) {
+                    SelectionInfo.doorIndex = -1;
+                }
+                GUILayout.EndHorizontal();
+                
+                // Selected door settings
+                if (SelectionInfo.doorIndex > -1) {
+                    EditorGUILayout.Space();
+                    Door selectedDoor   = SelectedBuilding.doors[SelectionInfo.doorIndex];
+                    selectedDoor.height = EditorGUILayout.FloatField( "Door Height" , selectedDoor.height );
+                    selectedDoor.width  = EditorGUILayout.FloatField( "Door Width"  , selectedDoor.width  );
+                    selectedDoor.depth  = EditorGUILayout.FloatField( "Door Depth"  , selectedDoor.depth  );
+                    selectedDoor.position = EditorGUILayout.Slider("Door Position", selectedDoor.position, 0f, 1f);
+                }
+            }
+
+        } 
+        else if (BCMenu.showSelectedBuildingInfo && SelectionInfo.buildingIndex == -1) {
             EditorGUILayout.HelpBox("No Building Selected", MessageType.Warning);
         }
         EditorGUILayout.Space(15f);
 
-        // Delete buildings if needed (While maintaining proper selection)
-        if (buildingDeleteIndex != -1) {
+        // Delete buildings / doors if needed (While maintaining proper selection)
+        if (buildingDeleteIndex > -1) {
             Undo.RecordObject(BC, "Delete Building");
             BC.buildings.RemoveAt(buildingDeleteIndex);
             if (SelectionInfo.buildingIndex == buildingDeleteIndex) SelectionInfo.buildingIndex = -1;
             else if (SelectionInfo.buildingIndex > buildingDeleteIndex) SelectionInfo.buildingIndex--;
+        } 
+        else if (doorDeleteIndex > -1) {
+            Undo.RecordObject(BC, "Delete Door");
+            SelectedBuilding.doors.RemoveAt(doorDeleteIndex);
+            if (SelectionInfo.doorIndex == doorDeleteIndex) SelectionInfo.doorIndex = -1;
+            else if (SelectionInfo.doorIndex > doorDeleteIndex) SelectionInfo.doorIndex--;
         }
 
         // If settings were changed repaint Scene view
@@ -205,10 +263,8 @@ public class BuildingCreatorEditor : Editor {
                     CreateNewPoint();
                 }
             } else if (BCMenu.mode == 1) {
-                if (SelectionInfo.mouseIsOverPoint || SelectionInfo.mouseIsOverLine) {
-                    SelectBuildingUnderMouse();
-                    StartDrag();
-                }
+                SelectBuildingUnderMouse();
+                StartDrag();
             } else if (BCMenu.mode == 2) {
                 SelectBuildingUnderMouse();
                 StartDrag();
@@ -273,10 +329,8 @@ public class BuildingCreatorEditor : Editor {
                     SelectedBuilding.points[SelectionInfo.mouseOverPointIndex] = mousePosition;
                 }
             } else if (BCMenu.mode == 1) {
-                if (SelectionInfo.mouseOverBuildingIndex != -1) {
-                    Vector3 displacement = mousePosition - SelectionInfo.positionAtDragStart;
-                    SelectedBuilding.points = SelectionInfo.pointsAtDragStart.Map(a => a + displacement);
-                }
+                Vector3 displacement = mousePosition - SelectionInfo.positionAtDragStart;
+                SelectedBuilding.points = SelectionInfo.pointsAtDragStart.Map(a => a + displacement);
             } else if (BCMenu.mode == 2) {
                 Vector3 initialDirection = (SelectionInfo.positionAtDragStart - SelectionInfo.centerAtDragStart).normalized;
                 Vector3 currentDirection = (mousePosition - SelectionInfo.centerAtDragStart).normalized;
@@ -369,6 +423,7 @@ public class BuildingCreatorEditor : Editor {
         void SelectBuildingUnderMouse() {
             if (SelectionInfo.mouseOverBuildingIndex != -1) {
                 SelectionInfo.buildingIndex = SelectionInfo.mouseOverBuildingIndex;
+                SelectionInfo.doorIndex = -1;
                 buildingHasChanged = true;
             }
         }
@@ -434,7 +489,7 @@ public class BuildingCreatorEditor : Editor {
                 bool mouseIsOverThisLine = (i == SelectionInfo.mouseOverLineIndex && mouseIsOverCurrentBuilding);
                 bool thisPointIsBeingDragged = (mouseIsOverThisPoint && SelectionInfo.mouseIsBeingDragged);
                 
-                // Bottom lines
+                // 2D Outline
                 if (BCMenu.showOutline2D || BCMenu.showOutline3D) {
                     // On hover
                     if (mouseIsOverThisLine)
@@ -471,9 +526,9 @@ public class BuildingCreatorEditor : Editor {
                     Handles.DrawSolidDisc(thisPoint, Vector3.up, BCMenu.handleRadius);
                 }
                 
-                // Vertical Lines
+                // 3D Outline (Vertical)
                 if (BCMenu.showOutline3D){
-                    // Color
+                    // Vertical Color
                     if (thisPointIsBeingDragged)
                         Handles.color = dragged;
                     else if (mouseIsOverThisPoint)
@@ -482,9 +537,21 @@ public class BuildingCreatorEditor : Editor {
                         Handles.color = activeLine;
                     else
                         Handles.color = deselected;
-                    // Draw
+                    // Draw Vertical
                     Handles.DrawDottedLine(thisPoint, aboveThisPoint, 4f);
+                    
+                    // Horizontal Color
+                    if (currentBuildingIsSelected)
+                        Handles.color = activeLine;
+                    else
+                        Handles.color = deselected;
+
+                    // Draw Horizontal
+                    Handles.DrawDottedLine(aboveThisPoint, aboveNextPoint, 4f);
+
                 }
+
+
 
                 // Offset guides
                 if (BCMenu.showGuides) {

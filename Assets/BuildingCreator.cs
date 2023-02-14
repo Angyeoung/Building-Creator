@@ -32,31 +32,32 @@ public class BuildingCreator : MonoBehaviour {
 [System.Serializable]
 public class Building {
     public string name;
-    // List of points for the buildin
+    // List of points in the building
     public List<Vector3> points = new List<Vector3>();
-    // Mesh of the building
+    // List of doors on the building
+    public List<Door> doors = new List<Door>();
+    // Meshes of the building
     public Mesh buildingMesh = null;
     public Mesh windowMesh = null;
     // Material of the building
     public Material buildingMaterial = null;
     public Material windowMaterial = null;
-    // Windows and doors
-    public GameObject window;
-    public GameObject door;
+    public Material doorMaterial = null;
     // Building Settings
     public bool inverted = false;
     public float height = 10;
     // Visibility
     public bool showBuildingMesh = false;
     public bool showWindowMesh = false;
+    public bool showDoorMesh = false;
     // Window settings
     public float windowHeight = 5;
     public float windowWidth = 5;
-    public float windowDepth = 1;
+    public float windowDepth = 0.1f;
     // Offsets
-    public float topOffset = 0.2f;
-    public float bottomOffset = 0.2f;
-    public float edgeOffset = 0.1f;
+    public float topOffset = 0;
+    public float bottomOffset = 0f;
+    public float edgeOffset = 0f;
     // Gaps
     public float horizontalGap = 1;
     public float verticalGap = 1;
@@ -74,6 +75,18 @@ public class Building {
             this.points.Average(v => v.z)
         );
     }}
+}
+
+[System.Serializable]
+public class Door {
+
+    public int wallIndex = 0;
+    
+    public float height = 1;
+    public float width = 1;
+    public float depth = 0.1f;
+    public float position = 0;
+
 }
 
 // This class stores selection information
@@ -94,6 +107,7 @@ public static class SelectionInfo {
     }}
     // Selection
     public static int buildingIndex;
+    public static int doorIndex;
     // Mouse Over
     public static int mouseOverBuildingIndex = -1;
     public static int mouseOverPointIndex = -1;
@@ -107,11 +121,11 @@ public static class BCMenu {
     // [0: "Shape Mode", 1: "Move Mode"]
     public static int mode = 0;
     // Is the debug info foldout visible?
-    public static bool showDebugInfo = false;
-    // Is the view settings foldout visible? 
-    public static bool showViewSettings = false;
+    public static bool showDebugInfo;
+    // Is the view settings foldout visible?
+    public static bool showViewSettings;
     // Is the 3D outline visible?
-    public static bool showOutline3D = true;
+    public static bool showOutline3D;
     // Is the 2D outline visible?
     public static bool showOutline2D = true;
     // Are guides visible?
@@ -121,9 +135,11 @@ public static class BCMenu {
     // Radius to use for the handles
     public static float handleRadius = 1f;
     // Is the building list foldout visible?
-    public static bool showBuildingsList = false;
+    public static bool showBuildingsList;
     // Is the selected building foldout visible?
-    public static bool showSelectedBuildingInfo = false;
+    public static bool showSelectedBuildingInfo;
     // Is the window settings foldout visible?
-    public static bool showWindowSettings = false;
+    public static bool showWindowSettings;
+    // Is the door settings foldout visible?
+    public static bool showDoorSettings;
 }
