@@ -82,8 +82,8 @@ public class Door {
 
     public int wallIndex = 0;
     
-    public float height = 1;
-    public float width = 1;
+    public float height = 5;
+    public float width = 5;
     public float depth = 0.1f;
     public float position = 0;
 

@@ -53,6 +53,15 @@ public static class Extensions {
         return temp;
     }
 
+    // Custom JS-like .filter() function =)
+    // public static List<T> Filter<T>(this List<T> list, Func<T, bool> func) {
+    //     List<T> result = new List<T>();
+    //     list.ForEach(t => {
+    //         if (func(t)) result.Add(t);
+    //     });
+    //     return result;
+    // }
+
     // Cross product of 2 Vector2
     public static float Cross(this Vector2 a, Vector2 b) {
         return a.x * b.y - a.y * b.x;

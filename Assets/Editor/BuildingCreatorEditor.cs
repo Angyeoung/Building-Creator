@@ -538,7 +538,36 @@ public class BuildingCreatorEditor : Editor {
                     Handles.DrawDottedLine(aboveThisPoint, aboveNextPoint, 4f);
                 }
 
+                if (BCMenu.showWindowOutlines) {
+                    // Show window outlines
+                }
 
+                if (BCMenu.showDoorOutlines) {
+                    List<Door> doors = currentBuilding.doors;
+                    
+                    for (int doorIndex = 0; doorIndex < doors.Count; doorIndex++) {
+                        Door currentDoor = doors[doorIndex]; 
+                        
+                        if (currentDoor.wallIndex == i) {
+                            bool currentDoorIsSelected = (doorIndex == SelectionInfo.doorIndex);
+                            Vector3 thisToNext = nextPoint - thisPoint;
+                            Vector3 direction = thisToNext.normalized;
+                            Vector3 position = (thisToNext.magnitude - currentDoor.width) * currentDoor.position * direction;
+                            Vector3 doorPoint1 = thisPoint + position;
+                            Vector3 doorPoint2 = doorPoint1 + currentDoor.height * Vector3.up;
+                            Vector3 doorPoint3 = doorPoint2 + currentDoor.width * direction;
+                            Vector3 doorPoint4 = doorPoint3 + currentDoor.height * Vector3.down;
+                            /*  2 -- 3
+                                |    |  1, 0, 1, 1
+                                1    4  */
+                            Handles.color = currentDoorIsSelected ? new Color(1, 0, 1, 1) : new Color(1, 0, 1, 0.5f);
+                            Handles.DrawDottedLine(doorPoint1, doorPoint2, 4);
+                            Handles.DrawDottedLine(doorPoint2, doorPoint3, 4);
+                            Handles.DrawDottedLine(doorPoint3, doorPoint4, 4);
+                        }
+
+                    }
+                }
 
                 // Offset guides
                 if (BCMenu.showGuides) {
