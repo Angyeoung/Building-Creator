@@ -21,11 +21,17 @@ public class BuildingCreator : MonoBehaviour {
         if (main == null) {
             main = this;
             meshFilter = this.gameObject.GetComponent<MeshFilter>();
-            meshFilter.mesh = new Mesh();
+            // meshFilter.mesh = new Mesh();
             meshRenderer = this.gameObject.GetComponent<MeshRenderer>();
             this.gameObject.transform.position = Vector3.zero;
         }
     }
+
+    // Not sure if this is needed but it doesn't break anything
+    void onAwake() {
+        DontDestroyOnLoad(this);
+    }
+
 }
 
 // Class for individual building

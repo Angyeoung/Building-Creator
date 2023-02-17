@@ -243,7 +243,7 @@ public class BuildingCreatorEditor : Editor {
             HandleLeftMouseDown();
         else if (guiEvent.type == EventType.MouseUp && guiEvent.button == 0) 
             HandleLeftMouseUp();
-        else if (guiEvent.type == EventType.MouseDrag && guiEvent.button == 0 && guiEvent.modifiers == EventModifiers.None) 
+        else if (guiEvent.type == EventType.MouseDrag && guiEvent.button == 0) 
             HandleLeftMouseDrag();
         else if (!SelectionInfo.mouseIsBeingDragged) 
             UpdateSelectionInfo();
@@ -490,7 +490,7 @@ public class BuildingCreatorEditor : Editor {
                 Vector3 aboveNextPoint = nextPoint + Vector3.up * h;
                 bool mouseIsOverThisPoint = (i == SelectionInfo.mouseOverPointIndex && mouseIsOverCurrentBuilding);
                 bool mouseIsOverThisLine  = (i == SelectionInfo.mouseOverLineIndex && mouseIsOverCurrentBuilding);
-                bool thisPointIsDragged = (mouseIsOverThisPoint && SelectionInfo.mouseIsBeingDragged);
+                bool thisPointIsDragged   = (mouseIsOverThisPoint && SelectionInfo.mouseIsBeingDragged);
                 
                 // 2D Outline
                 if (BCMenu.showOutline2D || BCMenu.showOutline3D) {
@@ -515,7 +515,7 @@ public class BuildingCreatorEditor : Editor {
                     // Color
                     Handles.color = thisPointIsDragged ? dragged    :
                                   mouseIsOverThisPoint ? 
-                                   Event.current.shift ? activeLine : hover :
+                                        guiEvent.shift ? activeLine : hover :
                              currentBuildingIsSelected ? 
                                       BCMenu.mode == 1 ? move       : idle  :
                                                          deselected ;
@@ -557,13 +557,25 @@ public class BuildingCreatorEditor : Editor {
                             Vector3 doorPoint2 = doorPoint1 + currentDoor.height * Vector3.up;
                             Vector3 doorPoint3 = doorPoint2 + currentDoor.width * direction;
                             Vector3 doorPoint4 = doorPoint3 + currentDoor.height * Vector3.down;
-                            /*  2 -- 3
-                                |    |  1, 0, 1, 1
-                                1    4  */
+
                             Handles.color = currentDoorIsSelected ? new Color(1, 0, 1, 1) : new Color(1, 0, 1, 0.5f);
-                            Handles.DrawDottedLine(doorPoint1, doorPoint2, 4);
-                            Handles.DrawDottedLine(doorPoint2, doorPoint3, 4);
-                            Handles.DrawDottedLine(doorPoint3, doorPoint4, 4);
+                            Handles.DrawDottedLines(new Vector3[] {
+                                    doorPoint1, doorPoint2,     doorPoint2, doorPoint3,
+                                    doorPoint3, doorPoint4,     doorPoint4, doorPoint1,
+                                }, 4);
+                            if (currentDoor.depth != 0) {
+                                Vector3 perpendicular = new Vector3(-direction.z, 0, direction.x) * currentDoor.depth;
+                                Vector3 doorPoint5 = doorPoint1 + perpendicular;
+                                Vector3 doorPoint6 = doorPoint2 + perpendicular;
+                                Vector3 doorPoint7 = doorPoint3 + perpendicular;
+                                Vector3 doorPoint8 = doorPoint4 + perpendicular;
+                                Handles.DrawDottedLines(new Vector3[] {
+                                    doorPoint1, doorPoint5,     doorPoint2, doorPoint6,
+                                    doorPoint3, doorPoint7,     doorPoint4, doorPoint8,
+                                    doorPoint5, doorPoint6,     doorPoint6, doorPoint7,
+                                    doorPoint7, doorPoint8,     doorPoint8, doorPoint5
+                                }, 4);
+                            }
                         }
 
                     }
