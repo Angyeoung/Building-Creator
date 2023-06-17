@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,6 +10,7 @@ using UnityEditor;
 [CustomEditor(typeof(BuildingCreator))]
 public class BuildingCreatorEditor : Editor {
 
+    BuildingCreator BC;
     // Used to repaint views / remake meshes
     bool buildingHasChanged = true;
     bool meshHasChanged = true;
@@ -24,10 +26,9 @@ public class BuildingCreatorEditor : Editor {
         EditorGUI.ProgressBar(rect, 1, "Building Creator");
 
         // Edit Modes
-        string[] options = {"Shape", "Move", "Rotate"};
+        string[] options = {"Shape Mode", "Move Mode", "Rotate Mode"};
         BCMenu.mode = GUILayout.Toolbar(BCMenu.mode, options);
-
-        // Debug info foldout
+        // Debug info foldout   
         BCMenu.showDebugInfo = EditorGUILayout.Foldout(BCMenu.showDebugInfo, "Debug Info");
         if (BCMenu.showDebugInfo) {
             EditorGUILayout.Space(5f);
@@ -49,6 +50,7 @@ public class BuildingCreatorEditor : Editor {
         EditorGUILayout.Space(15f);
         BCMenu.showViewSettings = EditorGUILayout.Foldout(BCMenu.showViewSettings, "View Settings");
         if (BCMenu.showViewSettings) {
+            BCMenu.liveUpdate         = EditorGUILayout.ToggleLeft( "Live Update",          BCMenu.liveUpdate         );
             BCMenu.showOutline2D      = EditorGUILayout.ToggleLeft( "Show 2D Outline",      BCMenu.showOutline2D      );
             BCMenu.showOutline3D      = EditorGUILayout.ToggleLeft( "Show 3D Outline",      BCMenu.showOutline3D      );
             BCMenu.showWindowOutlines = EditorGUILayout.ToggleLeft( "Show Window Outlines", BCMenu.showWindowOutlines );
@@ -106,18 +108,21 @@ public class BuildingCreatorEditor : Editor {
         EditorGUILayout.Space(15f);
         int doorDeleteIndex = -1;
         BCMenu.showBuildingInfo = EditorGUILayout.Foldout(BCMenu.showBuildingInfo, "Selected Building Info");
-        if (BCMenu.showBuildingInfo && SelectionInfo.buildingIndex != -1) {
+        if (BCMenu.showBuildingInfo && BuildingIsSelected) {
             // General Settings
             EditorGUILayout.Space();
-            SelectedBuilding.inverted         = EditorGUILayout.ToggleLeft( "Inverted",           SelectedBuilding.inverted         );
-            SelectedBuilding.showBuildingMesh = EditorGUILayout.ToggleLeft( "Show Building Mesh", SelectedBuilding.showBuildingMesh );
-            SelectedBuilding.showWindowMesh   = EditorGUILayout.ToggleLeft( "Show Window Mesh",   SelectedBuilding.showWindowMesh   );
-            SelectedBuilding.showDoorMesh     = EditorGUILayout.ToggleLeft( "Show Door Mesh",     SelectedBuilding.showDoorMesh     );
+            SelectedBuilding.inverted         = EditorGUILayout.ToggleLeft( "Inverted",      SelectedBuilding.inverted         );
+            SelectedBuilding.showBuildingMesh = EditorGUILayout.ToggleLeft( "Building Mesh", SelectedBuilding.showBuildingMesh );
+            SelectedBuilding.showWindowMesh   = EditorGUILayout.ToggleLeft( "Window Mesh",   SelectedBuilding.showWindowMesh   );
+            SelectedBuilding.showDoorMesh     = EditorGUILayout.ToggleLeft( "Door Mesh",     SelectedBuilding.showDoorMesh     );
             EditorGUILayout.Space();
             SelectedBuilding.height           = EditorGUILayout.FloatField( "Building Height",    SelectedBuilding.height );
             EditorGUILayout.Space();
             // Material
+            EditorGUILayout.BeginHorizontal();
             SelectedBuilding.buildingMaterial = (Material)EditorGUILayout.ObjectField( "Building Material", SelectedBuilding.buildingMaterial, typeof(Material), true );
+            GUILayout.Button(new GUIContent("R", "Reset Texture"), GUILayout.Width(18));
+            EditorGUILayout.EndHorizontal();
             SelectedBuilding.windowMaterial   = (Material)EditorGUILayout.ObjectField( "Window Material",   SelectedBuilding.windowMaterial,   typeof(Material), true );
             SelectedBuilding.doorMaterial     = (Material)EditorGUILayout.ObjectField( "Door Material",     SelectedBuilding.doorMaterial,     typeof(Material), true );
 
@@ -258,7 +263,7 @@ public class BuildingCreatorEditor : Editor {
                     SelectBuildingUnderMouse();
                     SelectPointUnderMouse();
                     StartDrag(); 
-                } else if (SelectionInfo.buildingIndex == -1 && !SelectionInfo.mouseIsOverLine) {
+                } else if (!BuildingIsSelected && !SelectionInfo.mouseIsOverLine) {
                     CreateNewBuilding();
                     CreateNewPoint();
                 } else {
@@ -276,34 +281,48 @@ public class BuildingCreatorEditor : Editor {
 
         // Handles LMBU input
         void HandleLeftMouseUp() {
+            if (!BuildingIsSelected) return;
+
             if (BCMenu.mode == 0) {
                 if (SelectionInfo.mouseIsBeingDragged) {
                     SelectedBuilding.points[SelectionInfo.mouseOverPointIndex] = SelectionInfo.positionAtDragStart;
                     Undo.RecordObject(BC, "Move point");
                     SelectedBuilding.points[SelectionInfo.mouseOverPointIndex] = mousePosition;
+
                     SelectionInfo.mouseIsBeingDragged = false;
                     buildingHasChanged = true;
                     meshHasChanged = true;
                 }
-            } else if (BCMenu.mode == 1) {
+            } 
+            else if (BCMenu.mode == 1) {
                 if (SelectionInfo.mouseIsBeingDragged) {
                     List<Vector3> pointsAtDragEnd = new List<Vector3>(SelectedBuilding.points);
                     SelectedBuilding.points = SelectionInfo.pointsAtDragStart;
                     Undo.RecordObject(BC, "Move building");
                     SelectedBuilding.points = pointsAtDragEnd;
+
                     SelectionInfo.mouseIsBeingDragged = false;
                     buildingHasChanged = true;
                     meshHasChanged = true;
                 }
-            } else if (BCMenu.mode == 2) {
+            } 
+            else if (BCMenu.mode == 2) {
                 List<Vector3> pointsAtDragEnd = new List<Vector3>(SelectedBuilding.points);
                 SelectedBuilding.points = SelectionInfo.pointsAtDragStart;
                 Undo.RecordObject(BC, "Rotate building");
                 SelectedBuilding.points = pointsAtDragEnd;
+
                 SelectionInfo.mouseIsBeingDragged = false;
                 buildingHasChanged = true;
                 meshHasChanged = true;
             }
+            if (meshHasChanged) {
+                ClearMesh();
+                SetBuildingMeshes();
+                UpdateComponents();
+            }       
+            meshHasChanged = false;
+            buildingHasChanged = false;
         }
 
         // Handles Shift + LMBD input
@@ -327,14 +346,15 @@ public class BuildingCreatorEditor : Editor {
 
         // Handles LMB drag input
         void HandleLeftMouseDrag() { 
-            if (BCMenu.mode == 0) {
-                if (SelectionInfo.mouseOverPointIndex != -1) {
-                    SelectedBuilding.points[SelectionInfo.mouseOverPointIndex] = mousePosition;
-                }
-            } else if (BCMenu.mode == 1) {
+            if (!BuildingIsSelected) return;
+            if (BCMenu.mode == 0 && MouseIsOverPoint) {
+                SelectedBuilding.points[SelectionInfo.mouseOverPointIndex] = mousePosition;
+            } 
+            else if (BCMenu.mode == 1) {
                 Vector3 displacement = mousePosition - SelectionInfo.positionAtDragStart;
                 SelectedBuilding.points = SelectionInfo.pointsAtDragStart.Map(a => a + displacement);
-            } else if (BCMenu.mode == 2) {
+            } 
+            else if (BCMenu.mode == 2) {
                 Vector3 initialDirection = (SelectionInfo.positionAtDragStart - SelectionInfo.centerAtDragStart).normalized;
                 Vector3 currentDirection = (mousePosition - SelectionInfo.centerAtDragStart).normalized;
                 float angle = Vector3.SignedAngle(initialDirection, currentDirection, Vector3.up);
@@ -342,9 +362,7 @@ public class BuildingCreatorEditor : Editor {
                 List<Vector3> relativePositions = SelectionInfo.pointsAtDragStart.Map(p => p - SelectionInfo.centerAtDragStart);
                 SelectedBuilding.points = relativePositions.Map(p => (rotation * p) + SelectionInfo.centerAtDragStart);
             }
-            buildingHasChanged = true;
-            meshHasChanged = true;
- 
+            buildingHasChanged = true; 
         }
 
         // Updates the Selection Info class
@@ -441,6 +459,8 @@ public class BuildingCreatorEditor : Editor {
 
         // Start dragging the point/building under the mouse
         void StartDrag() {
+            if (!BuildingIsSelected) return;
+
             SelectionInfo.mouseIsBeingDragged = true;
             SelectionInfo.positionAtDragStart = mousePosition;
             SelectionInfo.pointsAtDragStart = new List<Vector3>(SelectedBuilding.points);
@@ -450,6 +470,8 @@ public class BuildingCreatorEditor : Editor {
 
         // Delete point under mouse
         void DeletePointUnderMouse() {
+            if (!BuildingIsSelected || !MouseIsOverPoint) return;
+
             Undo.RecordObject(BC, "Delete point");
             SelectedBuilding.points.RemoveAt(SelectionInfo.mouseOverPointIndex);
             if (SelectedBuilding.points.Count == 0) {
@@ -602,7 +624,7 @@ public class BuildingCreatorEditor : Editor {
                 Handles.color = (currentBuildingIsSelected) ? Color.magenta : Color.gray;
                 Vector3 center = currentBuilding.CenterPoint;
                 Handles.DrawSolidDisc(center, Vector3.up, 3f);
-                if (SelectionInfo.mouseIsBeingDragged) {
+                if (SelectionInfo.mouseIsBeingDragged && BuildingIsSelected) {
                     Handles.DrawDottedLine(SelectedBuilding.CenterPoint, mousePosition, 4f);
                 }
             }
@@ -757,7 +779,7 @@ public class BuildingCreatorEditor : Editor {
 
     // Update shared mesh
     void UpdateComponents() {
-        BC.meshFilter.sharedMesh.Clear();
+        BC.GetComponent<MeshFilter>().sharedMesh.Clear();
         List<CombineInstance> meshes = new List<CombineInstance>();
 
         for (int i = 0; i < BC.buildings.Count; i++) {
@@ -775,8 +797,8 @@ public class BuildingCreatorEditor : Editor {
             }
         }
 
-        BC.meshFilter.sharedMesh.CombineMeshes(meshes.ToArray(), false, false, false);
-        BC.meshFilter.sharedMesh.RecalculateNormals();
+        BC.GetComponent<MeshFilter>().sharedMesh.CombineMeshes(meshes.ToArray(), false, false, false);
+        BC.GetComponent<MeshFilter>().sharedMesh.RecalculateNormals();
 
         // Materials
         List<Material> materials = new List<Material>();
@@ -791,16 +813,19 @@ public class BuildingCreatorEditor : Editor {
                 materials.Add(BC.buildings[i].windowMaterial);
             }
         }
-        BC.meshRenderer.sharedMaterials = materials.ToArray();
+        BC.GetComponent<MeshRenderer>().sharedMaterials = materials.ToArray();
     }
 
     // Clear shared mesh
     void ClearMesh() {
-        BC.meshFilter.sharedMesh.Clear();
+        BC.GetComponent<MeshFilter>().sharedMesh.Clear();
     }
 
     // When the editor is enabled
     void OnEnable() {
+        BC = target as BuildingCreator;
+        BC.GetComponent<MeshFilter>().sharedMesh = new Mesh();
+        BC.transform.position = Vector3.zero;
         // Subscribe undo/redo function
         Undo.undoRedoPerformed += OnUndoOrRedo;
         // Hides tools that get in the way during building editing
@@ -828,19 +853,22 @@ public class BuildingCreatorEditor : Editor {
         buildingHasChanged = true;
     }
 
-    // Shorthand for getting the building creator singleton instance
-    BuildingCreator BC {
-        get {
-            return BuildingCreator.main;
-        }
-    }
-
     // Shorthand for getting the selected building
-    Building SelectedBuilding {
-        get {
-            return BuildingCreator.main.buildings[SelectionInfo.buildingIndex];
-        }
-    }
+    Building SelectedBuilding { get {
+        return BC.buildings[SelectionInfo.buildingIndex];
+    }}
 
+    // Shorthand for getting bool whether building is selected
+    bool BuildingIsSelected { get {
+        return SelectionInfo.buildingIndex >= 0;
+    }}
+
+    bool MouseIsOverPoint { get {
+        return SelectionInfo.mouseIsOverPoint;
+    }}
+
+    bool MouseIsOverLine { get {
+        return SelectionInfo.mouseIsOverLine;
+    }}
 }
 

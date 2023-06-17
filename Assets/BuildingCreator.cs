@@ -4,39 +4,20 @@ using System.Linq;
 using UnityEngine;
 
 // This class is used for storing building information and settings
-
 [ExecuteInEditMode]
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class BuildingCreator : MonoBehaviour {
 
-    public MeshFilter meshFilter;
-    public MeshRenderer meshRenderer;
     // List of buildings
     public List<Building> buildings = new List<Building>();
-
-    // Singleton functionality
-    // https://gamedevbeginner.com/singletons-in-unity-the-right-way/
-    public static BuildingCreator main { get; private set; }
-    void OnEnable() {
-        if (main == null) {
-            main = this;
-            meshFilter = this.gameObject.GetComponent<MeshFilter>();
-            // meshFilter.mesh = new Mesh();
-            meshRenderer = this.gameObject.GetComponent<MeshRenderer>();
-            this.gameObject.transform.position = Vector3.zero;
-        }
-    }
-
-    // Not sure if this is needed but it doesn't break anything
-    void onAwake() {
-        DontDestroyOnLoad(this);
-    }
 
 }
 
 // Class for individual building
 [System.Serializable]
 public class Building {
+    public static Material tempMaterial = new Material(Shader.Find("Standard"));
+
     public string name;
     // List of points in the building
     public List<Vector3> points = new List<Vector3>();
@@ -46,9 +27,9 @@ public class Building {
     public Mesh buildingMesh = null;
     public Mesh windowMesh   = null;
     // Material of the building
-    public Material buildingMaterial = null;
-    public Material windowMaterial   = null;
-    public Material doorMaterial     = null;
+    public Material buildingMaterial = tempMaterial;
+    public Material windowMaterial   = tempMaterial;
+    public Material doorMaterial     = tempMaterial;
     // Building Settings
     public bool inverted = false;
     public float height = 10;
@@ -71,6 +52,7 @@ public class Building {
     public Building(string name = "Untitled") {
         this.name = name;
     }
+    // Move every point in the building by a vector
     public void MoveBy(Vector3 displacement) {
         this.points = this.points.Map(a => a + displacement);
     }
@@ -96,24 +78,22 @@ public class Door {
 }
 
 // This class stores selection information
+[System.Serializable]
 public static class SelectionInfo {
     // Drag
     public static bool mouseIsBeingDragged = false;
     public static Vector3 positionAtDragStart;
     public static List<Vector3> pointsAtDragStart;
     public static Vector3 centerAtDragStart { get {
-        if (buildingIndex == -1)
-            return Vector3.zero;
-        else
-            return new Vector3(
-                pointsAtDragStart.Average(v => v.x),
-                pointsAtDragStart.Average(v => v.y),
-                pointsAtDragStart.Average(v => v.z)
-            );
+        return buildingIndex == -1 ? Vector3.zero : new Vector3(
+            pointsAtDragStart.Average(v => v.x),
+            pointsAtDragStart.Average(v => v.y),
+            pointsAtDragStart.Average(v => v.z)
+        );
     }}
     // Selection
-    public static int buildingIndex;
-    public static int doorIndex;
+    public static int buildingIndex = -1;
+    public static int doorIndex = -1;
     // Mouse Over
     public static int mouseOverBuildingIndex = -1;
     public static int mouseOverPointIndex    = -1;
@@ -123,6 +103,7 @@ public static class SelectionInfo {
 }
 
 // This class stores info used for the inspector menu
+[System.Serializable]
 public static class BCMenu {
     // [0: "Shape Mode", 1: "Move Mode", 2: "Rotate Mode"]
     public static int mode = 0;
@@ -135,6 +116,7 @@ public static class BCMenu {
     public static bool showDoorSettings   = false;
     
     // Outlines, Guides and Handles
+    public static bool liveUpdate         = false;
     public static bool showOutline2D      = true;
     public static bool showOutline3D      = true;
     public static bool showWindowOutlines = false;
